@@ -134,4 +134,101 @@
 
 body {
   @apply font-sans;
+  background-color: #F7F4EC;
+  color: #172020;
+}
+
+/* Editorial Writing Lab Theme */
+.essay-font {
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.8;
+}
+
+.zh-font {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+}
+
+/* Vermilion accent */
+.text-vermilion {
+  color: #F15B3D;
+}
+.bg-vermilion {
+  background-color: #F15B3D;
+}
+.border-vermilion {
+  border-color: #F15B3D;
+}
+
+/* Criterion colors */
+.text-ta { color: #0D9488; }
+.text-cc { color: #2563EB; }
+.text-lr { color: #D97706; }
+.text-gra { color: #E11D48; }
+.bg-ta { background-color: #0D9488; }
+.bg-cc { background-color: #2563EB; }
+.bg-lr { background-color: #D97706; }
+.bg-gra { background-color: #E11D48; }
+.border-ta { border-color: #0D9488; }
+.border-cc { border-color: #2563EB; }
+.border-lr { border-color: #D97706; }
+.border-gra { border-color: #E11D48; }
+
+/* Ivory paper background */
+.bg-ivory {
+  background-color: #F7F4EC;
+}
+.bg-ivory-dark {
+  background-color: #EDE8DC;
+}
+
+/* Thin rules */
+.rule {
+  border-bottom: 1px solid #E5E0D5;
+}
+
+/* Correction animations */
+@keyframes pulse-border {
+  0%, 100% { border-color: #F15B3D; opacity: 1; }
+  50% { border-color: #F15B3D; opacity: 0.5; }
+}
+.paragraph-active {
+  animation: pulse-border 1.5s ease-in-out infinite;
+  border-left: 3px solid #F15B3D;
+  padding-left: 12px;
+}
+
+@keyframes strikethrough-anim {
+  from { text-decoration-color: transparent; }
+  to { text-decoration-color: #F15B3D; }
+}
+.text-strikethrough {
+  text-decoration: line-through;
+  text-decoration-color: #F15B3D;
+  color: #9CA3AF;
+  animation: strikethrough-anim 0.3s ease-out forwards;
+}
+
+@keyframes fade-in-type {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.text-replacement {
+  color: #172020;
+  animation: fade-in-type 0.4s ease-out forwards;
+  font-weight: 500;
+}
+
+/* Score number animation */
+@keyframes score-reveal {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+.score-number {
+  animation: score-reveal 0.5s ease-out forwards;
+}
+
+/* Playback progress */
+@keyframes progress-bar {
+  from { width: 0; }
+  to { width: 100%; }
 }
