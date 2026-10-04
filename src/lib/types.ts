@@ -1,5 +1,11 @@
 export type TaskType = 'academic1' | 'general1' | 'task2';
 
+export interface ContentPart {
+  type: 'text' | 'image_url' | 'video_url';
+  text?: string;
+  image_url?: { url: string; detail?: 'low' | 'high' | 'auto' };
+}
+
 export interface Paragraph {
   id: string;
   text: string;

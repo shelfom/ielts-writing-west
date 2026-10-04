@@ -10,14 +10,10 @@ import {
   type Criterion,
   type ExaminerStage,
 } from '@/lib/examiner-validation';
-import type { Paragraph } from '@/lib/types';
+import type { Paragraph, ContentPart } from '@/lib/types';
 
 /** A lock older than this is considered stale and may be reclaimed. */
 const STALE_LOCK_MS = 150_000;
-
-type ContentPart =
-  | { type: 'text'; text: string }
-  | { type: 'image_url'; image_url: { url: string; detail: 'high' | 'low' } };
 
 export async function POST(
   request: NextRequest,

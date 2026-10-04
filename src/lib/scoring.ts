@@ -22,3 +22,14 @@ export function computeOverall(scores: number[]): number {
 export function clampBand(score: number): number {
   return Math.max(0, Math.min(9, Math.round(score)));
 }
+
+/**
+ * Split essay text into code-assigned ordered paragraphs.
+ * Paragraph IDs are stable: p1, p2, ... in source order.
+ */
+export function splitParagraphs(text: string): { id: string; text: string }[] {
+  return text
+    .split(/\n\n+/)
+    .filter(p => p.trim().length > 0)
+    .map((t, i) => ({ id: `p${i + 1}`, text: t.trim() }));
+}

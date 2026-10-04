@@ -4,8 +4,9 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { createLLMClient, extractHeaders, MODEL_ID } from '@/lib/llm';
 import { buildAssessmentPrompt, getCriterionLabels } from '@/lib/prompts';
 import { computeOverall } from '@/lib/scoring';
+import { getStorage } from '@/lib/storage';
 import { z } from 'zod';
-import type { Assessment, TaskType } from '@/lib/types';
+import type { Assessment, TaskType, ContentPart } from '@/lib/types';
 
 const assessmentSchema = z.object({
   ta_tr: z.number().int().min(0).max(9),
@@ -87,13 +88,36 @@ export async function POST(
       hasTaskImage
     );
 
+    // Build content parts with image for Task1
+    const contentParts: ContentPart[] = [{ type: 'text', text: prompt }];
+    if (hasTaskImage && submission.task_image_id) {
+      try {
+        const { data: uploadData } = await client
+          .from('uploads')
+          .select('storage_key')
+          .eq('id', submission.task_image_id)
+          .eq('owner_hash', ownerHash)
+          .maybeSingle();
+        if (uploadData?.storage_key) {
+          const storage = getStorage();
+          const presignedUrl = await storage.generatePresignedUrl({
+            key: uploadData.storage_key,
+            expireTime: 3600,
+          });
+          contentParts.push({ type: 'image_url', image_url: { url: presignedUrl, detail: 'high' } });
+        }
+      } catch (imgErr) {
+        console.error('Failed to get task image URL:', imgErr);
+      }
+    }
+
     // First attempt
     let assessmentData: z.infer<typeof assessmentSchema>;
     let retryUsed = false;
 
     try {
       const response = await llmClient.invoke(
-        [{ role: 'user', content: prompt }],
+        [{ role: 'user', content: contentParts as unknown as string }],
         { model: MODEL_ID, temperature: 0.2 }
       );
       assessmentData = parseAssessmentJSON(response.content);
@@ -102,7 +126,7 @@ export async function POST(
       retryUsed = true;
       const retryResponse = await llmClient.invoke(
         [
-          { role: 'user', content: prompt },
+          { role: 'user', content: contentParts as unknown as string },
           { role: 'assistant', content: 'I need to provide the assessment in the exact JSON format requested.' },
           { role: 'user', content: 'Please output ONLY the JSON assessment result.' },
         ],

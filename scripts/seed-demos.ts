@@ -5,13 +5,15 @@
  * Saves to demos table. NOT a public endpoint.
  */
 import { createLLMClient, MODEL_ID } from '../src/lib/llm';
-import { buildAssessmentPrompt, buildExaminerPrompt } from '../src/lib/prompts';
-import { roundToHalf } from '../src/lib/scoring';
+import { buildAssessmentPrompt, buildExaminerPrompt, getCriterionLabels } from '../src/lib/prompts';
+import { computeOverall, splitParagraphs } from '../src/lib/scoring';
 import { getSupabaseClient } from '../src/storage/database/supabase-client';
 import { parseExaminerOutput, validateExaminerOutput } from '../src/lib/examiner-validation';
 import samples from '../demo-samples.json';
 import fs from 'node:fs';
 import path from 'node:path';
+import { z } from 'zod';
+import type { Assessment, TaskType } from '../src/lib/types';
 
 type Criterion = 'ta_tr' | 'cc' | 'lr' | 'gra';
 const CRITERION_ORDER: Criterion[] = ['ta_tr', 'cc', 'lr', 'gra'];
@@ -19,6 +21,16 @@ const CRITERION_ORDER: Criterion[] = ['ta_tr', 'cc', 'lr', 'gra'];
 type ContentPart =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string; detail: 'high' | 'low' } };
+
+/** Same flat output schema as the real HTTP /assess endpoint. */
+const flatAssessmentSchema = z.object({
+  ta_tr: z.number().int().min(0).max(9),
+  cc: z.number().int().min(0).max(9),
+  lr: z.number().int().min(0).max(9),
+  gra: z.number().int().min(0).max(9),
+  diagnosisZh: z.string().min(10),
+  diagnosisEn: z.string().min(10),
+});
 
 /** Load the real PNG chart as an inline data URL for vision calls. */
 function chartDataUrl(): string {
@@ -30,10 +42,6 @@ function chartDataUrl(): string {
   return `data:image/png;base64,${png.toString('base64')}`;
 }
 
-function splitParagraphs(text: string) {
-  return text.split(/\n\n+/).filter(p => p.trim()).map((text, i) => ({ id: `p${i + 1}`, text: text.trim() }));
-}
-
 async function runAssessment(
   taskType: string,
   promptText: string,
@@ -41,7 +49,11 @@ async function runAssessment(
   chartUrl: string | null
 ) {
   const llm = createLLMClient({});
-  const prompt = buildAssessmentPrompt(taskType as any, promptText, originalText, chartUrl !== null);
+  let chartSourceData: string | undefined;
+  if (taskType === 'academic1') {
+    chartSourceData = `Commuters using public transport (%):\n- Alder: 2010=40%, 2020=55%\n- Brook: 2010=25%, 2020=45%\n- Cedar: 2010=15%, 2020=25%`;
+  }
+  const prompt = buildAssessmentPrompt(taskType as TaskType, promptText, originalText, chartUrl !== null, chartSourceData);
 
   const contentParts: ContentPart[] = [{ type: 'text', text: prompt }];
   if (chartUrl) {
@@ -49,35 +61,48 @@ async function runAssessment(
   }
 
   let attempts = 0;
-  const maxAttempts = 3;
+  const maxAttempts = 2; // initial + one malformed-output retry, same as HTTP /assess
+  const startedAt = Date.now();
 
   while (attempts < maxAttempts) {
     try {
-      const response = await llm.invoke(
-        [{ role: 'user', content: contentParts as unknown as string }],
-        {
-          model: MODEL_ID,
-          temperature: 0.2,
-          thinking: 'disabled' as const,
-          caching: 'disabled' as const,
-        }
-      );
+      let invokeMessages: { role: 'user' | 'assistant'; content: string }[];
+      if (attempts === 0) {
+        invokeMessages = [{ role: 'user', content: contentParts as unknown as string }];
+      } else {
+        // Malformed-output repair turns, identical to the real HTTP /assess endpoint.
+        invokeMessages = [
+          { role: 'user', content: contentParts as unknown as string },
+          { role: 'assistant', content: 'I need to provide the assessment in the exact JSON format requested.' },
+          { role: 'user', content: 'Your previous output was not valid JSON. Output ONLY a single valid JSON object matching the requested schema, with no markdown or commentary.' },
+        ];
+      }
+      const response = await llm.invoke(invokeMessages, {
+        model: MODEL_ID,
+        temperature: attempts === 0 ? 0.2 : 0.1,
+        thinking: 'disabled' as const,
+        caching: 'disabled' as const,
+      });
       const jsonMatch = response.content.match(/```(?:json)?\s*([\s\S]*?)```/);
       const jsonStr = jsonMatch ? jsonMatch[1].trim() : response.content.trim();
-      const parsed = JSON.parse(jsonStr);
-      const scores = {
-        ta_tr: parsed.ta_tr,
-        cc: parsed.cc,
-        lr: parsed.lr,
-        gra: parsed.gra,
-      };
-      const overall = roundToHalf((scores.ta_tr + scores.cc + scores.lr + scores.gra) / 4);
-      return {
-        scores,
+      const parsed = flatAssessmentSchema.parse(JSON.parse(jsonStr));
+      const overall = computeOverall([parsed.ta_tr, parsed.cc, parsed.lr, parsed.gra]);
+      const labels = getCriterionLabels(taskType as TaskType);
+      // Persist the exact same nested schema as the real HTTP /assess endpoint.
+      const assessment: Assessment = {
+        scores: {
+          ta_tr: { score: parsed.ta_tr, labelZh: labels.ta_tr.labelZh, labelEn: labels.ta_tr.labelEn },
+          cc: { score: parsed.cc, labelZh: labels.cc.labelZh, labelEn: labels.cc.labelEn },
+          lr: { score: parsed.lr, labelZh: labels.lr.labelZh, labelEn: labels.lr.labelEn },
+          gra: { score: parsed.gra, labelZh: labels.gra.labelZh, labelEn: labels.gra.labelEn },
+        },
         overall,
         diagnosisZh: parsed.diagnosisZh,
         diagnosisEn: parsed.diagnosisEn,
+        provider_model: MODEL_ID,
+        duration_ms: Date.now() - startedAt,
       };
+      return assessment;
     } catch (err) {
       attempts++;
       console.log(`  Assessment retry ${attempts}/${maxAttempts}...`);
@@ -92,7 +117,7 @@ async function runExaminerStage(
   criterion: Criterion,
   promptText: string,
   paragraphs: { id: string; text: string }[],
-  assessment: { scores: Record<string, number> },
+  assessment: Assessment,
   chartUrl: string | null
 ) {
   const llm = createLLMClient({});
@@ -104,13 +129,11 @@ async function runExaminerStage(
   }
 
   const prompt = buildExaminerPrompt(
-    taskType as any,
+    taskType as TaskType,
     criterion,
     promptText,
     paragraphs,
-    Object.fromEntries(
-      Object.entries(assessment.scores).map(([k, v]) => [k, { score: v }])
-    ),
+    assessment.scores,
     chartUrl !== null,
     chartSourceData
   );
@@ -176,7 +199,7 @@ async function seedDemo(slug: string, sample: any) {
     chartUrl
   );
   console.log(
-    `Assessment done in ${Date.now() - assessStart}ms. Scores: ta_tr=${assessment.scores.ta_tr}, cc=${assessment.scores.cc}, lr=${assessment.scores.lr}, gra=${assessment.scores.gra}, overall=${assessment.overall}`
+    `Assessment done in ${Date.now() - assessStart}ms. Scores: ta_tr=${assessment.scores.ta_tr.score}, cc=${assessment.scores.cc.score}, lr=${assessment.scores.lr.score}, gra=${assessment.scores.gra.score}, overall=${assessment.overall}`
   );
 
   // Run 4 examiner stages; each starts from the previous saved document.

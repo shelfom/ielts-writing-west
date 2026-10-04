@@ -57,7 +57,8 @@ export function buildAssessmentPrompt(
   taskType: TaskType,
   promptText: string,
   originalText: string,
-  hasTaskImage: boolean
+  hasTaskImage: boolean,
+  chartSourceData?: string
 ): string {
   const criterionName = taskType === 'task2' ? 'Task Response' : 'Task Achievement';
   const taskGuidance = getTaskSpecificGuidance(taskType);
@@ -71,6 +72,8 @@ ${promptText}
 ${originalText}
 
 ${hasTaskImage ? '## Chart/Task Image\nA chart/task image was provided by the student. Use it to verify data accuracy and key features mentioned in the essay.' : ''}
+
+${chartSourceData ? `## Authoritative Chart Source Data\n${chartSourceData}\nThese figures are authoritative. Verify every data claim in the essay against them. Distinguish WRONG UNIT (e.g., "55 commuters" vs "55%") from WRONG VALUE (a figure that does not match). Quote the exact phrase when reporting a data error. Do not claim a fact is wrong when it matches these figures.` : ''}
 
 ## Assessment Criteria (based on public IELTS Writing Band Descriptors)
 
@@ -106,6 +109,10 @@ ${taskGuidance}
 3. Provide a concise bilingual diagnosis (Chinese + English) explaining the main strengths and weaknesses
 4. Do NOT claim examiner calibration or official scoring
 5. Be honest and constructive
+6. Quote the EXACT original phrase for any weakness you cite; do not paraphrase what the student wrote into a different error
+7. Distinguish grammar rules from stylistic options: a stylistic preference is NOT an error and must not lower a score
+8. Do NOT claim "by + past time requires past perfect", do NOT require optional commas, and do NOT treat natural synonyms (e.g., experienced/saw, increased/rose) as errors
+9. Each criterion judgement must concern only that criterion: subject-verb agreement, plural nouns and comparatives are GRA; factual/unit errors are TA/TR
 
 ## Output Format (strict JSON)
 \`\`\`json

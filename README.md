@@ -1,363 +1,89 @@
-# projects
+# Band Autopsy / 作文解剖室
 
-这是一个基于 [Next.js 16](https://nextjs.org) + [shadcn/ui](https://ui.shadcn.com) 的全栈应用项目，由扣子编程 CLI 创建。
+IELTS Writing assessment and correction tool. Students submit an essay, receive AI scoring on the four IELTS criteria (grounded in public IELTS Writing band descriptors), then watch four criterion-specific examiners revise the essay one edit at a time.
 
-## 快速开始
+## Model / integration configuration
 
-### 启动开发服务器
+- **Model**: `doubao-seed-2-0-pro-260215` (Doubao Seed 2 Pro, multimodal) via `coze-coding-dev-sdk`
+  - Vision OCR, chart-informed assessment, and four examiner stages all call this model
+  - `thinking: 'disabled'` and `caching: 'disabled'` on bounded calls
+- **Database**: managed PostgreSQL (Supabase), accessed with the service-role key server-side. RLS enabled.
+- **Storage**: managed S3-compatible private object storage for uploads; presigned URLs generated server-side
+- All credentials are read from environment variables; none are committed to the repository.
 
-```bash
-coze-dev dev
-```
+Required environment variables (provided by the platform):
 
-启动后，在浏览器中打开 [http://localhost:5000](http://localhost:5000) 查看应用。
+- `COZE_SUPABASE_URL`, `COZE_SUPABASE_ANON_KEY`, `COZE_SUPABASE_SERVICE_ROLE_KEY`
+- `COZE_BUCKET_ENDPOINT_URL`, `COZE_BUCKET_NAME`
+- `DEPLOY_RUN_PORT`
+- `COZE_PROJECT_DOMAIN_DEFAULT`
 
-开发服务器支持热更新，修改代码后页面会自动刷新。
+## Endpoints
 
-### 构建生产版本
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/api/uploads` | Multipart upload (`file`, `role=essay\|task`); magic-byte validation, JPG/PNG, max 8MB, max 3 essay pages; returns `{uploadIds}` |
+| POST | `/api/extract` | `{uploadIds}` → real vision OCR, `{text}`; preserves errors, never corrects |
+| POST | `/api/submissions` | `{taskType, promptText, originalText, taskImageId?}` → `{id}`; code-assigned paragraph IDs; rate limit 20/hour/session |
+| GET | `/api/submissions/:id` | Owner-scoped full submission (paragraphs, assessment, correction stages, status, timings) |
+| POST | `/api/submissions/:id/assess` | One real model assessment; Zod validation + one malformed-output retry; overall computed in code; cached on replay |
+| POST | `/api/submissions/:id/correct` | Legacy whole-essay correction (kept for compatibility) |
+| POST | `/api/submissions/:id/examiners/:criterion` | One criterion stage (`ta_tr`,`cc`,`lr`,`gra`); atomic claim with stale-lock expiry; one malformed-output retry; chained from previous saved stage |
+| GET | `/api/demos?slug=task1\|task2` | Public read-only approved demo payload; zero model calls |
+| GET | `/api/health` | Liveness + DB query; no secrets |
 
-```bash
-coze-dev build
-```
+## Four-examiner flow
 
-### 启动生产服务器
+1. Assessment scores the **original essay only**. Four equally weighted integer criterion estimates; overall = average rounded to nearest 0.5 (half-up) in server code. Labelled an estimate, not an official IELTS score.
+2. Four stages run in fixed order `ta_tr → cc → lr → gra`. Each stage:
+   - takes the previous saved stage's document as input,
+   - changes only its own remit and retains the student's position/meaning,
+   - returns exactly every code-assigned paragraph ID once,
+   - records real bilingual diagnosis, per-reason explanations, `duration_ms`, `provider_model`.
+3. `src/components/theatre/theatre-engine.ts` computes `diffWordsWithSpace` between consecutive saved stages (never model offsets). The rendered document changes in phases: highlight → strike → type replacement → commit. The final reconstructed document equals the saved fourth stage.
 
-```bash
-coze-dev start
-```
+## Public demos
 
-## 项目结构
+- `/demo/task1` — Academic Task 1 (bar chart; chart also published at `/demo-chart.png`)
+- `/demo/task2` — Task 2 essay
+- Both rows were seeded with real assessment + four real model stages via the server-only script (`scripts/seed-demos.ts`); there is no public write path. Replay makes zero model calls and works in a brand-new browser session.
 
-```
-src/
-├── app/                      # Next.js App Router 目录
-│   ├── layout.tsx           # 根布局组件
-│   ├── page.tsx             # 首页
-│   ├── globals.css          # 全局样式（包含 shadcn 主题变量）
-│   └── [route]/             # 其他路由页面
-├── components/              # React 组件目录
-│   └── ui/                  # shadcn/ui 基础组件（优先使用）
-│       ├── button.tsx
-│       ├── card.tsx
-│       └── ...
-├── lib/                     # 工具函数库
-│   └── utils.ts            # cn() 等工具函数
-└── hooks/                   # 自定义 React Hooks（可选）
-
-server/
-├── index.ts                 # 自定义服务器入口
-├── tsconfig.json           # Server TypeScript 配置
-└── dist/                    # 编译输出目录（自动生成）
-```
-
-## 核心开发规范
-
-### 1. 组件开发
-
-**优先使用 shadcn/ui 基础组件**
-
-本项目已预装完整的 shadcn/ui 组件库，位于 `src/components/ui/` 目录。开发时应优先使用这些组件作为基础：
-
-```tsx
-// ✅ 推荐：使用 shadcn 基础组件
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-
-export default function MyComponent() {
-  return (
-    <Card>
-      <CardHeader>标题</CardHeader>
-      <CardContent>
-        <Input placeholder="输入内容" />
-        <Button>提交</Button>
-      </CardContent>
-    </Card>
-  );
-}
-```
-
-**可用的 shadcn 组件清单**
-
-- 表单：`button`, `input`, `textarea`, `select`, `checkbox`, `radio-group`, `switch`, `slider`
-- 布局：`card`, `separator`, `tabs`, `accordion`, `collapsible`, `scroll-area`
-- 反馈：`alert`, `alert-dialog`, `dialog`, `toast`, `sonner`, `progress`
-- 导航：`dropdown-menu`, `menubar`, `navigation-menu`, `context-menu`
-- 数据展示：`table`, `avatar`, `badge`, `hover-card`, `tooltip`, `popover`
-- 其他：`calendar`, `command`, `carousel`, `resizable`, `sidebar`
-
-详见 `src/components/ui/` 目录下的具体组件实现。
-
-### 2. 路由开发
-
-Next.js 使用文件系统路由，在 `src/app/` 目录下创建文件夹即可添加路由：
+## Local development
 
 ```bash
-# 创建新路由 /about
-src/app/about/page.tsx
-
-# 创建动态路由 /posts/[id]
-src/app/posts/[id]/page.tsx
-
-# 创建路由组（不影响 URL）
-src/app/(marketing)/about/page.tsx
-
-# 创建 API 路由
-src/app/api/users/route.ts
-```
-
-**页面组件示例**
-
-```tsx
-// src/app/about/page.tsx
-import { Button } from '@/components/ui/button';
-
-export const metadata = {
-  title: '关于我们',
-  description: '关于页面描述',
-};
-
-export default function AboutPage() {
-  return (
-    <div>
-      <h1>关于我们</h1>
-      <Button>了解更多</Button>
-    </div>
-  );
-}
-```
-
-**动态路由示例**
-
-```tsx
-// src/app/posts/[id]/page.tsx
-export default async function PostPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-
-  return <div>文章 ID: {id}</div>;
-}
-```
-
-**API 路由示例**
-
-```tsx
-// src/app/api/users/route.ts
-import { NextResponse } from 'next/server';
-
-export async function GET() {
-  return NextResponse.json({ users: [] });
-}
-
-export async function POST(request: Request) {
-  const body = await request.json();
-  return NextResponse.json({ success: true });
-}
-```
-
-### 3. 依赖管理
-
-**必须使用 pnpm 管理依赖**
-
-```bash
-# ✅ 安装依赖
 pnpm install
+pnpm dev          # development server on ${DEPLOY_RUN_PORT:-5000}
+pnpm ts-check     # TypeScript check
+pnpm lint         # ESLint
+pnpm build        # production build
 
-# ✅ 添加新依赖
-pnpm add package-name
-
-# ✅ 添加开发依赖
-pnpm add -D package-name
-
-# ❌ 禁止使用 npm 或 yarn
-# npm install  # 错误！
-# yarn add     # 错误！
+# Seed/replace demo rows (real model calls; server-only)
+npx tsx scripts/seed-demos.ts [task1|task2]
 ```
 
-项目已配置 `preinstall` 脚本，使用其他包管理器会报错。
+## Migrations
 
-### 4. 样式开发
+Schema is defined in Drizzle (`src/storage/database/shared/schema.ts`) and applied with the platform DB tooling. Tables: `uploads`, `submissions`, `demos`. RLS is enabled on all tables; the service-role client is used only server-side.
 
-**使用 Tailwind CSS v4**
+## Tests
 
-本项目使用 Tailwind CSS v4 进行样式开发，并已配置 shadcn 主题变量。
+- Engine tests (`node:test` + tsx): paragraph chaining, diff endpoint reconstruction, ordered phases, rejection of missing/duplicate/unknown paragraph IDs and wrong order, unchanged-paragraph handling.
 
-```tsx
-// 使用 Tailwind 类名
-<div className="flex items-center gap-4 p-4 rounded-lg bg-background">
-  <Button className="bg-primary text-primary-foreground">
-    主要按钮
-  </Button>
-</div>
-
-// 使用 cn() 工具函数合并类名
-import { cn } from '@/lib/utils';
-
-<div className={cn(
-  "base-class",
-  condition && "conditional-class",
-  className
-)}>
-  内容
-</div>
+```bash
+npx tsx --test src/components/theatre/theatre-engine.test.ts
 ```
 
-**主题变量**
+## Recorded processing times (this environment)
 
-主题变量定义在 `src/app/globals.css` 中，支持亮色/暗色模式：
+- Task 1 demo: assessment ~11s; stages ~13/12/10/10s
+- Task 2 demo: assessment ~9s; stages ~31/18/16/28s
+- Cached stage replay: sub-second; non-owner requests: 404
 
-- `--background`, `--foreground`
-- `--primary`, `--primary-foreground`
-- `--secondary`, `--secondary-foreground`
-- `--muted`, `--muted-foreground`
-- `--accent`, `--accent-foreground`
-- `--destructive`, `--destructive-foreground`
-- `--border`, `--input`, `--ring`
+## Limitations
 
-### 5. 表单开发
-
-推荐使用 `react-hook-form` + `zod` 进行表单开发：
-
-```tsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-
-const formSchema = z.object({
-  username: z.string().min(2, '用户名至少 2 个字符'),
-  email: z.string().email('请输入有效的邮箱'),
-});
-
-export default function MyForm() {
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: { username: '', email: '' },
-  });
-
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-    console.log(data);
-  };
-
-  return (
-    <form onSubmit={form.handleSubmit(onSubmit)}>
-      <Input {...form.register('username')} />
-      <Input {...form.register('email')} />
-      <Button type="submit">提交</Button>
-    </form>
-  );
-}
-```
-
-### 6. 数据获取
-
-**服务端组件（推荐）**
-
-```tsx
-// src/app/posts/page.tsx
-async function getPosts() {
-  const res = await fetch('https://api.example.com/posts', {
-    cache: 'no-store', // 或 'force-cache'
-  });
-  return res.json();
-}
-
-export default async function PostsPage() {
-  const posts = await getPosts();
-
-  return (
-    <div>
-      {posts.map(post => (
-        <div key={post.id}>{post.title}</div>
-      ))}
-    </div>
-  );
-}
-```
-
-**客户端组件**
-
-```tsx
-'use client';
-
-import { useEffect, useState } from 'react';
-
-export default function ClientComponent() {
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    fetch('/api/data')
-      .then(res => res.json())
-      .then(setData);
-  }, []);
-
-  return <div>{JSON.stringify(data)}</div>;
-}
-```
-
-## 常见开发场景
-
-### 添加新页面
-
-1. 在 `src/app/` 下创建文件夹和 `page.tsx`
-2. 使用 shadcn 组件构建 UI
-3. 根据需要添加 `layout.tsx` 和 `loading.tsx`
-
-### 创建业务组件
-
-1. 在 `src/components/` 下创建组件文件（非 UI 组件）
-2. 优先组合使用 `src/components/ui/` 中的基础组件
-3. 使用 TypeScript 定义 Props 类型
-
-### 添加全局状态
-
-推荐使用 React Context 或 Zustand：
-
-```tsx
-// src/lib/store.ts
-import { create } from 'zustand';
-
-interface Store {
-  count: number;
-  increment: () => void;
-}
-
-export const useStore = create<Store>((set) => ({
-  count: 0,
-  increment: () => set((state) => ({ count: state.count + 1 })),
-}));
-```
-
-### 集成数据库
-
-推荐使用 Prisma 或 Drizzle ORM，在 `src/lib/db.ts` 中配置。
-
-## 技术栈
-
-- **框架**: Next.js 16.1.1 (App Router)
-- **UI 组件**: shadcn/ui (基于 Radix UI)
-- **样式**: Tailwind CSS v4
-- **表单**: React Hook Form + Zod
-- **图标**: Lucide React
-- **字体**: Geist Sans & Geist Mono
-- **包管理器**: pnpm 9+
-- **TypeScript**: 5.x
-
-## 参考文档
-
-- [Next.js 官方文档](https://nextjs.org/docs)
-- [shadcn/ui 组件文档](https://ui.shadcn.com)
-- [Tailwind CSS 文档](https://tailwindcss.com/docs)
-- [React Hook Form](https://react-hook-form.com)
-
-## 重要提示
-
-1. **必须使用 pnpm** 作为包管理器
-2. **优先使用 shadcn/ui 组件** 而不是从零开发基础组件
-3. **遵循 Next.js App Router 规范**，正确区分服务端/客户端组件
-4. **使用 TypeScript** 进行类型安全开发
-5. **使用 `@/` 路径别名** 导入模块（已配置）
+- Anonymous cookie ownership only; no login/accounts
+- Single model; no provider choice
+- Max 1500 words/essay; prompt max 6000 chars; rate limit 20 submissions/hour/session
+- No PDF/Word export, no multiple target-language rewrites
+- Scores are model estimates, not examiner-certified official IELTS results
+- Synchronous stage endpoints; each stage is separately resumable
