@@ -88,27 +88,18 @@ export async function POST(
       hasTaskImage
     );
 
-    // Build content parts with image for Task1
+    // A chart task must never silently fall back to text-only assessment.
     const contentParts: ContentPart[] = [{ type: 'text', text: prompt }];
-    if (hasTaskImage && submission.task_image_id) {
-      try {
-        const { data: uploadData } = await client
-          .from('uploads')
-          .select('storage_key')
-          .eq('id', submission.task_image_id)
-          .eq('owner_hash', ownerHash)
-          .maybeSingle();
-        if (uploadData?.storage_key) {
-          const storage = getStorage();
-          const presignedUrl = await storage.generatePresignedUrl({
-            key: uploadData.storage_key,
-            expireTime: 3600,
-          });
-          contentParts.push({ type: 'image_url', image_url: { url: presignedUrl, detail: 'high' } });
-        }
-      } catch (imgErr) {
-        console.error('Failed to get task image URL:', imgErr);
-      }
+    if (taskType === 'academic1' && !submission.task_image_id) {
+      throw new Error('Task image is required for Academic Task 1');
+    }
+    if (submission.task_image_id) {
+      const { data: uploadData, error: imageError } = await client
+        .from('uploads').select('storage_key')
+        .eq('id', submission.task_image_id).eq('owner_hash', ownerHash).maybeSingle();
+      if (imageError || !uploadData?.storage_key) throw new Error('Unable to load your task image; please retry');
+      const presignedUrl = await getStorage().generatePresignedUrl({key: uploadData.storage_key, expireTime: 3600});
+      contentParts.push({type: 'image_url', image_url: {url: presignedUrl, detail: 'high'}});
     }
 
     // First attempt

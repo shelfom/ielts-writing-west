@@ -140,20 +140,13 @@ export async function POST(
 
     const needsChart = submission.task_type === 'academic1' && criterion === 'ta_tr';
 
-    // For Task1, provide authoritative chart source data to prevent false data claims
-    let chartSourceData: string | undefined;
-    if (submission.task_type === 'academic1') {
-      chartSourceData = `Commuters using public transport (%):\n- Alder: 2010=40%, 2020=55%\n- Brook: 2010=25%, 2020=45%\n- Cedar: 2010=15%, 2020=25%`;
-    }
-
     const prompt = buildExaminerPrompt(
       submission.task_type as 'academic1' | 'general1' | 'task2',
       criterion,
       submission.prompt_text,
       inputParagraphs,
       assessment.scores,
-      needsChart,
-      chartSourceData
+      needsChart
     );
 
     // Vision context is resolved once and reused identically on the single retry.

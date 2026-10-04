@@ -1,24 +1,20 @@
-import { notFound } from 'next/navigation';
-import { ExaminerTheatre } from '@/components/theatre/ExaminerTheatre';
-import type { TheatreData } from '@/components/theatre/ExaminerTheatre';
-
-async function fetchDemo(slug: string): Promise<TheatreData | null> {
-  const baseUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
-  const res = await fetch(`${baseUrl}/api/demos?slug=${slug}`, { cache: 'no-store' });
-  if (!res.ok) return null;
-  return res.json();
-}
-
-export default async function DemoPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  if (!['task1', 'task2'].includes(slug)) {
-    notFound();
-  }
-
-  const data = await fetchDemo(slug);
-  if (!data) {
-    notFound();
-  }
-
-  return <ExaminerTheatre data={data} demo={true} autoPlay={false} />;
+'use client';
+import {useEffect, useState} from 'react';
+import {useParams} from 'next/navigation';
+import {ExaminerTheatre, type TheatreData} from '@/components/theatre/ExaminerTheatre';
+export default function DemoPage(){
+ const {slug}=useParams<{slug:string}>();
+ const [data,setData]=useState<TheatreData|null>(null);
+ const [error,setError]=useState<string|null>(null);
+ useEffect(()=>{
+  const controller=new AbortController();
+  setData(null);setError(null);
+  if(!['task1','task2'].includes(slug)){setError('示例不存在 / Demo not found');return;}
+  fetch(`/api/demos?slug=${encodeURIComponent(slug)}`,{signal:controller.signal,cache:'no-store'})
+   .then(async response=>{if(!response.ok)throw new Error('示例暂时无法加载 / Unable to load demo');return response.json();})
+   .then(setData).catch(e=>{if(e.name!=='AbortError')setError(e.message);});
+  return()=>controller.abort();
+ },[slug]);
+ if(data)return <ExaminerTheatre data={data} demo autoPlay={false}/>;
+ return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#f7f4ec',color:'#172020',padding:24}}><div><p>{error||'正在加载已保存的演示… / Loading saved demonstration…'}</p>{error&&<button onClick={()=>window.location.reload()}>重试 / Retry</button>}</div></main>;
 }
