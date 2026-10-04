@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerHash } from '@/lib/session';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { createLLMClient, extractHeaders, MODEL_ID } from '@/lib/llm';
-import { buildAssessmentPrompt } from '@/lib/prompts';
-import { computeOverall, clampBand } from '@/lib/scoring';
+import { buildAssessmentPrompt, getCriterionLabels } from '@/lib/prompts';
+import { computeOverall } from '@/lib/scoring';
 import { z } from 'zod';
 import type { Assessment, TaskType } from '@/lib/types';
 
@@ -15,13 +15,6 @@ const assessmentSchema = z.object({
   diagnosisZh: z.string().min(10),
   diagnosisEn: z.string().min(10),
 });
-
-const CRITERIA_LABELS: Record<string, { labelZh: string; labelEn: string }> = {
-  ta_tr: { labelZh: 'Task Achievement/Response', labelEn: 'Task Achievement/Response' },
-  cc: { labelZh: 'Coherence and Cohesion', labelEn: 'Coherence and Cohesion' },
-  lr: { labelZh: 'Lexical Resource', labelEn: 'Lexical Resource' },
-  gra: { labelZh: 'Grammatical Range and Accuracy', labelEn: 'Grammatical Range and Accuracy' },
-};
 
 function parseAssessmentJSON(text: string): z.infer<typeof assessmentSchema> {
   // Try to extract JSON from markdown code block
@@ -124,12 +117,14 @@ export async function POST(
     const scores = [assessmentData.ta_tr, assessmentData.cc, assessmentData.lr, assessmentData.gra];
     const overall = computeOverall(scores);
 
+    const labels = getCriterionLabels(taskType);
+
     const assessment: Assessment = {
       scores: {
-        ta_tr: { score: clampBand(assessmentData.ta_tr), ...CRITERIA_LABELS.ta_tr },
-        cc: { score: clampBand(assessmentData.cc), ...CRITERIA_LABELS.cc },
-        lr: { score: clampBand(assessmentData.lr), ...CRITERIA_LABELS.lr },
-        gra: { score: clampBand(assessmentData.gra), ...CRITERIA_LABELS.gra },
+        ta_tr: { score: assessmentData.ta_tr, labelZh: labels.ta_tr.labelZh, labelEn: labels.ta_tr.labelEn },
+        cc: { score: assessmentData.cc, labelZh: labels.cc.labelZh, labelEn: labels.cc.labelEn },
+        lr: { score: assessmentData.lr, labelZh: labels.lr.labelZh, labelEn: labels.lr.labelEn },
+        gra: { score: assessmentData.gra, labelZh: labels.gra.labelZh, labelEn: labels.gra.labelEn },
       },
       overall,
       diagnosisZh: assessmentData.diagnosisZh,

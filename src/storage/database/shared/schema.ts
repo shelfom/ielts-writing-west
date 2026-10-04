@@ -35,7 +35,7 @@ export const submissions = pgTable(
     task_image_id: varchar("task_image_id", { length: 36 }),
     paragraphs: jsonb("paragraphs"), // [{id, text}]
     assessment: jsonb("assessment"), // {scores: {ta,tr,cc,lr,gra}, overall, diagnosisZh, diagnosisEn}
-    correction: jsonb("correction"), // [{paragraphId, correctedText, reasons: [{criterion, quote, explanationZh, explanationEn}]}]
+    correction: jsonb("correction"), // {stages: [{criterion, diagnosisZh, diagnosisEn, paragraphs: [...]}]}
     playback: jsonb("playback"), // {events: [{paragraphId, type, timestamp, data}]}
     stage: varchar("stage", { length: 30 }).notNull().default("created"), // created|extracted|assessed|corrected|error
     status: varchar("status", { length: 20 }).notNull().default("pending"), // pending|processing|completed|error
@@ -51,4 +51,20 @@ export const submissions = pgTable(
     index("submissions_stage_idx").on(table.stage),
     index("submissions_created_at_idx").on(table.created_at),
   ]
+);
+
+export const demos = pgTable(
+  "demos",
+  {
+    slug: varchar("slug", { length: 20 }).primaryKey(), // 'task1' | 'task2'
+    task_type: varchar("task_type", { length: 20 }).notNull(),
+    prompt_text: text("prompt_text").notNull(),
+    original_text: text("original_text").notNull(),
+    task_image_url: text("task_image_url"), // public URL for demo chart
+    paragraphs: jsonb("paragraphs").notNull(),
+    assessment: jsonb("assessment").notNull(),
+    correction: jsonb("correction").notNull(), // {stages: [...]}
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  }
 );

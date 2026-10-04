@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
 import { LangToggle } from '@/components/LangToggle';
 
@@ -30,8 +31,12 @@ function InputFormInner() {
   const [taskImagePreview, setTaskImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ocrText, setOcrText] = useState<string | null>(null);
+  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
+  const [ocrConfirmed, setOcrConfirmed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const essayFileRef = useRef<HTMLInputElement>(null);
+  const essayPhotoRef = useRef<HTMLInputElement>(null);
 
   const handleTaskImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,6 +55,8 @@ function InputFormInner() {
       return;
     }
     setEssayImages(files);
+    setOcrConfirmed(false);
+    setOcrText(null);
   }, [t]);
 
   const handleTxtUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,6 +69,51 @@ function InputFormInner() {
       reader.readAsText(file, 'utf-8');
     }
   }, []);
+
+  const handleOcr = useCallback(async () => {
+    if (essayImages.length === 0) return;
+    setError(null);
+    setIsOcrProcessing(true);
+    try {
+      // Upload essay images
+      const formData = new FormData();
+      for (const img of essayImages) {
+        formData.append('file', img);
+        formData.append('role', 'essay');
+      }
+      const uploadRes = await fetch('/api/uploads', { method: 'POST', body: formData });
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+      const { uploadIds } = await uploadRes.json();
+
+      // OCR
+      const extractRes = await fetch('/api/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploadIds }),
+      });
+      if (!extractRes.ok) {
+        const err = await extractRes.json();
+        throw new Error(err.error || 'OCR failed');
+      }
+      const { text } = await extractRes.json();
+      setOcrText(text);
+      setOcrConfirmed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'OCR failed');
+    } finally {
+      setIsOcrProcessing(false);
+    }
+  }, [essayImages]);
+
+  const handleConfirmOcr = useCallback(() => {
+    if (ocrText) {
+      setEssayText(ocrText);
+      setOcrConfirmed(true);
+    }
+  }, [ocrText]);
 
   const loadExample = useCallback(() => {
     setPromptText(EXAMPLE_PROMPT);
@@ -78,6 +130,11 @@ function InputFormInner() {
     }
     if (!essayText.trim()) {
       setError(t('请输入作文内容', 'Essay text is required'));
+      return;
+    }
+    // Block if photos uploaded but OCR not confirmed
+    if (essayImages.length > 0 && !ocrConfirmed) {
+      setError(t('请先确认识别文字', 'Please confirm the transcribed text first'));
       return;
     }
 
@@ -99,22 +156,7 @@ function InputFormInner() {
         taskImageId = uploadIds[0];
       }
 
-      // Step 2: Upload essay images if present
-      if (essayImages.length > 0) {
-        const formData = new FormData();
-        for (const img of essayImages) {
-          formData.append('file', img);
-          formData.append('role', 'essay');
-        }
-        const uploadRes = await fetch('/api/uploads', { method: 'POST', body: formData });
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json();
-          throw new Error(err.error || 'Upload failed');
-        }
-        // OCR will be done after submission creation
-      }
-
-      // Step 3: Create submission
+      // Step 2: Create submission
       const submitRes = await fetch('/api/submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,7 +180,7 @@ function InputFormInner() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [taskType, promptText, essayText, taskImage, essayImages, router, t]);
+  }, [taskType, promptText, essayText, taskImage, essayImages, ocrConfirmed, router, t]);
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -155,6 +197,25 @@ function InputFormInner() {
 
       {/* Main */}
       <main className="max-w-4xl mx-auto px-6 py-12">
+        {/* Demo Cards */}
+        <div className="mb-12">
+          <h2 className="text-sm tracking-widest uppercase text-[#9CA3AF] zh-font mb-4">
+            {t('示例回放', 'Demo Replays')}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link href="/demo/task1" className="block p-6 border border-[#E5E0D5] rounded hover:border-[#F15B3D] transition-colors bg-white">
+              <div className="text-xs tracking-widest uppercase text-[#9CA3AF] mb-2">Academic Task 1</div>
+              <h3 className="text-lg font-medium text-[#172020] zh-font mb-2">{t('图表作文', 'Chart Essay')}</h3>
+              <p className="text-sm text-[#9CA3AF] zh-font">{t('观看四位考官演示', 'Watch four examiners')}</p>
+            </Link>
+            <Link href="/demo/task2" className="block p-6 border border-[#E5E0D5] rounded hover:border-[#F15B3D] transition-colors bg-white">
+              <div className="text-xs tracking-widest uppercase text-[#9CA3AF] mb-2">Task 2</div>
+              <h3 className="text-lg font-medium text-[#172020] zh-font mb-2">{t('议论文', 'Argumentative Essay')}</h3>
+              <p className="text-sm text-[#9CA3AF] zh-font">{t('观看四位考官演示', 'Watch four examiners')}</p>
+            </Link>
+          </div>
+        </div>
+
         {/* Hero */}
         <div className="mb-12">
           <h2 className="text-3xl md:text-4xl font-light text-[#172020] zh-font leading-tight mb-3">
@@ -256,7 +317,7 @@ function InputFormInner() {
             maxLength={15000}
           />
           <div className="flex items-center justify-between mt-2">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <input
                 ref={essayFileRef}
                 type="file"
@@ -271,14 +332,76 @@ function InputFormInner() {
                 {t('上传 TXT', 'Upload TXT')}
               </button>
               <span className="text-xs text-[#9CA3AF]">|</span>
-              <span className="text-xs text-[#9CA3AF] zh-font">
-                {t('图片上传（可选，最多3页）', 'Image upload (optional, max 3 pages)')}
-              </span>
+              <input
+                ref={essayPhotoRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                multiple
+                onChange={handleEssayFileChange}
+                className="hidden"
+              />
+              <button
+                onClick={() => essayPhotoRef.current?.click()}
+                className="text-xs text-[#9CA3AF] hover:text-[#172020] transition-colors zh-font"
+              >
+                {t('上传作文照片', 'Upload essay photos')}
+              </button>
+              {essayImages.length > 0 && (
+                <span className="text-xs text-[#172020] zh-font">
+                  ({essayImages.length} {t('张', 'files')})
+                </span>
+              )}
             </div>
             <div className="text-xs text-[#9CA3AF] zh-font">
               {essayText.split(/\s+/).filter(w => w).length} {t('词', 'words')}
             </div>
           </div>
+
+          {/* OCR Flow */}
+          {essayImages.length > 0 && !ocrConfirmed && (
+            <div className="mt-4 p-4 border border-[#E5E0D5] rounded bg-white">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-[#172020] zh-font">
+                  {t('照片识别', 'Photo OCR')}
+                </span>
+                {isOcrProcessing && (
+                  <span className="text-xs text-[#9CA3AF] zh-font">{t('识别中...', 'Processing...')}</span>
+                )}
+              </div>
+              {!ocrText && !isOcrProcessing && (
+                <button
+                  onClick={handleOcr}
+                  className="px-4 py-2 bg-[#F15B3D] text-white rounded text-sm hover:bg-[#d94a2e] transition-colors zh-font"
+                >
+                  {t('开始识别', 'Start OCR')}
+                </button>
+              )}
+              {ocrText && (
+                <div>
+                  <textarea
+                    value={ocrText}
+                    onChange={e => setOcrText(e.target.value)}
+                    className="w-full h-48 px-3 py-2 border border-[#E5E0D5] rounded text-sm essay-font resize-y focus:outline-none focus:border-[#F15B3D] mb-3"
+                    placeholder={t('识别的文字将显示在这里，请检查并修正...', 'Transcribed text will appear here. Please review and edit...')}
+                  />
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleConfirmOcr}
+                      className="px-4 py-2 bg-[#0D9488] text-white rounded text-sm hover:bg-[#0a7a70] transition-colors zh-font"
+                    >
+                      {t('确认识别文字', 'Confirm transcription')}
+                    </button>
+                    <button
+                      onClick={() => { setOcrText(null); setOcrConfirmed(false); }}
+                      className="px-4 py-2 border border-[#E5E0D5] rounded text-sm text-[#9CA3AF] hover:text-[#172020] transition-colors zh-font"
+                    >
+                      {t('重新识别', 'Re-OCR')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Error */}

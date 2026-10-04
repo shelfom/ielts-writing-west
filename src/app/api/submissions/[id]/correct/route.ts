@@ -14,18 +14,86 @@ const reasonSchema = z.object({
   explanationEn: z.string(),
 });
 
-const correctedParagraphSchema = z.object({
-  paragraphId: z.string(),
-  correctedText: z.string(),
-  reasons: z.array(reasonSchema),
+const rawReasonSchema = z.object({
+  criterion: z.string(),
+  quote: z.string(),
+  explanationZh: z.string(),
+  explanationEn: z.string(),
 });
 
-function parseCorrectionJSON(text: string): z.infer<typeof correctedParagraphSchema>[] {
+const rawCorrectedParagraphSchema = z.object({
+  paragraphId: z.string(),
+  correctedText: z.string(),
+  reasons: z.array(rawReasonSchema),
+});
+
+/** Normalize model criterion codes (TA/TR/CC/LR/GRA, any case) to storage keys. */
+function normalizeCriterion(code: string): 'ta_tr' | 'cc' | 'lr' | 'gra' {
+  const c = code.trim().toLowerCase();
+  if (c === 'ta' || c === 'tr' || c === 'ta_tr' || c === 'task achievement' || c === 'task response') return 'ta_tr';
+  if (c === 'cc' || c === 'coherence') return 'cc';
+  if (c === 'lr' || c === 'lexical') return 'lr';
+  if (c === 'gra' || c === 'grammar') return 'gra';
+  throw new Error(`Unknown criterion code: ${code}`);
+}
+
+function parseCorrectionJSON(text: string): z.infer<typeof rawCorrectedParagraphSchema>[] {
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const jsonStr = jsonMatch ? jsonMatch[1].trim() : text.trim();
   const parsed = JSON.parse(jsonStr);
   if (!Array.isArray(parsed)) throw new Error('Expected JSON array');
-  return z.array(correctedParagraphSchema).parse(parsed);
+  return z.array(rawCorrectedParagraphSchema).parse(parsed);
+}
+
+/**
+ * Validate model output against the original paragraphs:
+ * - exactly one entry per original paragraph
+ * - no missing or duplicate IDs
+ * - every correctedText must be a non-empty string
+ * Normalizes reasons to the internal criterion keys.
+ */
+function validateAndNormalize(
+  rawParagraphs: z.infer<typeof rawCorrectedParagraphSchema>[],
+  originalParagraphs: Paragraph[]
+): import('@/lib/types').CorrectedParagraph[] {
+  if (rawParagraphs.length !== originalParagraphs.length) {
+    throw new Error(
+      `Expected ${originalParagraphs.length} corrected paragraphs, got ${rawParagraphs.length}`
+    );
+  }
+
+  const seen = new Set<string>();
+  for (const p of rawParagraphs) {
+    if (seen.has(p.paragraphId)) {
+      throw new Error(`Duplicate paragraphId in model output: ${p.paragraphId}`);
+    }
+    seen.add(p.paragraphId);
+  }
+
+  const result: import('@/lib/types').CorrectedParagraph[] = [];
+  for (const orig of originalParagraphs) {
+    const match = rawParagraphs.find(p => p.paragraphId === orig.id);
+    if (!match) throw new Error(`Missing correction for paragraph ${orig.id}`);
+    if (!match.correctedText.trim()) {
+      throw new Error(`Empty correctedText for paragraph ${orig.id}`);
+    }
+
+    const normalizedReasons = match.reasons.map(r => ({
+      criterion: normalizeCriterion(r.criterion),
+      quote: r.quote,
+      explanationZh: r.explanationZh,
+      explanationEn: r.explanationEn,
+    }));
+
+    // An unchanged paragraph must not carry bogus error explanations.
+    if (match.correctedText === orig.text && normalizedReasons.length > 0) {
+      result.push({ paragraphId: match.paragraphId, correctedText: match.correctedText, reasons: [] });
+    } else {
+      result.push({ paragraphId: match.paragraphId, correctedText: match.correctedText, reasons: normalizedReasons });
+    }
+  }
+
+  return result;
 }
 
 function buildPlaybackEvents(
@@ -43,7 +111,7 @@ function buildPlaybackEvents(
       continue;
     }
 
-    // Compute diff
+    // Compute diff; only paragraphs with real changes are highlighted
     const diff = diffWordsWithSpace(origPara.text, corrected.correctedText);
     let hasChanges = false;
 
@@ -65,6 +133,20 @@ function buildPlaybackEvents(
 
   return events;
 }
+
+const LLM_OPTIONS_FIRST = {
+  model: MODEL_ID,
+  temperature: 0.2,
+  thinking: 'disabled' as const,
+  caching: 'disabled' as const,
+};
+
+const LLM_OPTIONS_RETRY = {
+  model: MODEL_ID,
+  temperature: 0.1,
+  thinking: 'disabled' as const,
+  caching: 'disabled' as const,
+};
 
 export async function POST(
   request: NextRequest,
@@ -129,7 +211,7 @@ export async function POST(
       }
     );
 
-    let correctedData: z.infer<typeof correctedParagraphSchema>[];
+    let correctedData: z.infer<typeof rawCorrectedParagraphSchema>[];
     try {
       const response = await llmClient.invoke(
         [{ role: 'user', content: prompt }],

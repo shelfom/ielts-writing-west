@@ -1,10 +1,33 @@
 import type { TaskType } from './types';
 
+// Bilingual display labels for the four IELTS criteria.
+// Task 1 -> Task Achievement (TA); Task 2 -> Task Response (TR).
+export interface CriterionLabels {
+  code: string;
+  labelZh: string;
+  labelEn: string;
+}
+
+export function getCriterionLabels(taskType: TaskType): Record<string, CriterionLabels> {
+  const isTask2 = taskType === 'task2';
+  return {
+    ta_tr: {
+      code: isTask2 ? 'TR' : 'TA',
+      labelZh: isTask2 ? '任务回应' : '任务完成度',
+      labelEn: isTask2 ? 'Task Response' : 'Task Achievement',
+    },
+    cc: { code: 'CC', labelZh: '连贯与衔接', labelEn: 'Coherence and Cohesion' },
+    lr: { code: 'LR', labelZh: '词汇资源', labelEn: 'Lexical Resource' },
+    gra: { code: 'GRA', labelZh: '语法多样性与准确性', labelEn: 'Grammatical Range and Accuracy' },
+  };
+}
+
+// Kept for backwards compatibility; assess/correct should prefer getCriterionLabels(taskType).
 const CRITERIA_LABELS = {
-  ta_tr: { zh: 'Task Achievement/Response', en: 'Task Achievement/Response' },
-  cc: { zh: 'Coherence and Cohesion', en: 'Coherence and Cohesion' },
-  lr: { zh: 'Lexical Resource', en: 'Lexical Resource' },
-  gra: { zh: 'Grammatical Range and Accuracy', en: 'Grammatical Range and Accuracy' },
+  ta_tr: { zh: '任务完成度', en: 'Task Achievement' },
+  cc: { zh: '连贯与衔接', en: 'Coherence and Cohesion' },
+  lr: { zh: '词汇资源', en: 'Lexical Resource' },
+  gra: { zh: '语法多样性与准确性', en: 'Grammatical Range and Accuracy' },
 };
 
 function getTaskSpecificGuidance(taskType: TaskType): string {
@@ -106,6 +129,8 @@ export function buildCorrectionPrompt(
   assessment: { ta_tr: number; cc: number; lr: number; gra: number }
 ): string {
   const paragraphsJson = JSON.stringify(paragraphs, null, 2);
+  const labels = getCriterionLabels(taskType);
+  const taskCriterion = `${labels.ta_tr.labelEn} (${labels.ta_tr.code})`;
 
   return `You are an expert IELTS Writing correction assistant. Correct the following essay paragraph by paragraph.
 
@@ -113,28 +138,27 @@ export function buildCorrectionPrompt(
 ${promptText}
 
 ## Assessment Scores
-- Task Achievement/Response: ${assessment.ta_tr}
-- Coherence and Cohesion: ${assessment.cc}
-- Lexical Resource: ${assessment.lr}
-- Grammatical Range and Accuracy: ${assessment.gra}
+- ${taskCriterion}: ${assessment.ta_tr}
+- Coherence and Cohesion (CC): ${assessment.cc}
+- Lexical Resource (LR): ${assessment.lr}
+- Grammatical Range and Accuracy (GRA): ${assessment.gra}
 
 ## Original Paragraphs (with IDs)
 ${paragraphsJson}
 
 ## Correction Rules
-1. Preserve the student's intended meaning and position
+1. Preserve the student's intended meaning, position and paragraph structure exactly
 2. Fix grammar, spelling, punctuation errors
 3. Improve word choice and collocations at the student's level
-4. Improve sentence structure for clarity
+4. Improve sentence structure for clarity only where needed
 5. Do NOT rewrite into a generic band-9 essay - correct at the student's level
-6. Do NOT invent data or facts not in the original
-7. For paragraphs that are already good, return the original text unchanged
-8. Each corrected paragraph must include reasons explaining the changes
-9. Reasons must reference the specific criterion (ta_tr, cc, lr, gra)
-10. Preserve paragraph order and IDs exactly
+6. Do NOT invent data or facts (especially chart figures) not in the original
+7. For paragraphs that are already good, return the original text unchanged and an empty reasons array
+8. Keep each explanation to ONE short sentence
+9. Each reason must reference one criterion code: ${labels.ta_tr.code}, CC, LR, GRA
+10. Output exactly one object per input paragraph; preserve every paragraphId and the original order; no duplicate or missing IDs
 
-## Output Format (strict JSON)
-\`\`\`json
+## Output Format (strict JSON array, no markdown commentary outside the array)
 [
   {
     "paragraphId": "<exact ID from input>",
@@ -143,16 +167,14 @@ ${paragraphsJson}
       {
         "criterion": "lr",
         "quote": "<the original problematic phrase>",
-        "explanationZh": "<Chinese explanation of the correction>",
-        "explanationEn": "<English explanation of the correction>"
+        "explanationZh": "<one short Chinese sentence>",
+        "explanationEn": "<one short English sentence>"
       }
     ]
   }
 ]
-\`\`\`
 
-For unchanged paragraphs, provide an empty reasons array [].
-Respond ONLY with the JSON array, no other text.`;
+Respond ONLY with the JSON array.`;
 }
 
 export function buildExtractPrompt(hasTaskImage: boolean): string {
@@ -179,3 +201,109 @@ Rules:
 }
 
 export { CRITERIA_LABELS };
+
+export type Criterion = 'ta_tr' | 'cc' | 'lr' | 'gra';
+
+const EXAMINER_PROFILES: Record<Criterion, { zh: string; en: string; focus: string }> = {
+  ta_tr: {
+    zh: '审题考官',
+    en: 'The Strategist',
+    focus: 'task coverage, accurate chart reporting, clear position/support',
+  },
+  cc: {
+    zh: '结构考官',
+    en: 'The Architect',
+    focus: 'organisation, referencing, logical links between ideas',
+  },
+  lr: {
+    zh: '词汇考官',
+    en: 'The Wordsmith',
+    focus: 'genuinely wrong or awkward word choice and collocations',
+  },
+  gra: {
+    zh: '语法考官',
+    en: 'The Grammarian',
+    focus: 'grammar, punctuation, and range where needed',
+  },
+};
+
+export function buildExaminerPrompt(
+  taskType: TaskType,
+  criterion: Criterion,
+  promptText: string,
+  paragraphs: { id: string; text: string }[],
+  assessment: Record<string, { score: number }>,
+  includeChartImage: boolean,
+  chartSourceData?: string
+): string {
+  const profile = EXAMINER_PROFILES[criterion];
+  const labels = getCriterionLabels(taskType);
+  const criterionLabel = criterion === 'ta_tr'
+    ? `${labels.ta_tr.labelEn} (${labels.ta_tr.code})`
+    : criterion === 'cc' ? 'Coherence and Cohesion (CC)'
+    : criterion === 'lr' ? 'Lexical Resource (LR)'
+    : 'Grammatical Range and Accuracy (GRA)';
+
+  const paragraphsJson = JSON.stringify(paragraphs, null, 2);
+
+  return `You are ${profile.en} (${profile.zh}), one of four IELTS examiners. You ONLY correct issues within your remit. Do NOT touch issues belonging to other examiners.
+
+## Your Remit: ${criterionLabel}
+Focus: ${profile.focus}
+
+## Task Prompt
+${promptText}
+
+## Original Assessment (fixed reference, do NOT change)
+- TA/TR: ${assessment.ta_tr?.score ?? 0}
+- CC: ${assessment.cc?.score ?? 0}
+- LR: ${assessment.lr?.score ?? 0}
+- GRA: ${assessment.gra?.score ?? 0}
+
+${chartSourceData ? `## Authoritative Chart Source Data\n${chartSourceData}\nVerify all data claims against these exact figures. Distinguish WRONG UNIT (e.g., "55 commuters" vs "55%") from WRONG VALUE. Do NOT claim a fact is wrong when it matches the source data.` : ''}
+
+## Current Essay Paragraphs
+${paragraphsJson}
+
+${includeChartImage ? '## Chart Image\nA chart image was provided. Verify data accuracy against it and the source data above.' : ''}
+
+## Critical Rules
+1. Change ONLY issues within your remit. Retain everything else exactly as-is.
+2. Preserve the student's intended meaning, position, and paragraph structure.
+3. Do NOT invent data, examples, or chart figures not in the original.
+4. Do NOT fix grammar already handled by the Grammarian (if you are not GRA).
+5. Do NOT invent errors. Optional stylistic preferences (e.g., need->require, experienced->saw) are NOT errors. Never present them as errors or score deductions.
+6. Unchanged paragraphs must have an empty reasons array.
+7. Each reason must reference your criterion code only.
+8. Keep explanations short and precise, bilingual.
+9. Output exactly one object per input paragraph; preserve every paragraphId and order.
+
+## Criterion-Specific Guidance
+- **GRA**: Subject-verb agreement, plural nouns, comparatives, tense consistency are GRA. Do NOT claim "by + past time requires past perfect" - "By 2020, the figure rose" is grammatically acceptable. Do NOT mandate commas where they are optional.
+- **LR**: Fix genuinely wrong collocations only. Both "experienced the biggest rise" and "saw the biggest rise" are natural - do NOT swap them and present it as an error correction.
+- **CC**: Do NOT invent causal links to add cohesion. Only fix actual referencing or linking errors.
+- **TA/TR**: May change fact/unit wording but must leave unrelated grammar for GRA. Verify data against source figures.
+
+## Output Format (strict JSON object)
+{
+  "diagnosisZh": "<one short Chinese sentence summarizing your changes>",
+  "diagnosisEn": "<one short English sentence summarizing your changes>",
+  "paragraphs": [
+    {
+      "paragraphId": "<exact ID from input>",
+      "correctedText": "<corrected paragraph text>",
+      "reasons": [
+        {
+          "criterion": "${criterion}",
+          "quote": "<the original problematic phrase from BEFORE text>",
+          "explanationZh": "<one short Chinese sentence>",
+          "explanationEn": "<one short English sentence>"
+        }
+      ]
+    }
+  ]
+}
+
+Respond ONLY with the JSON object.`;
+}
+
