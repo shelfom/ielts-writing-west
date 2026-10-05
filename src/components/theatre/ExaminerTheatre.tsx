@@ -59,7 +59,7 @@ export function ExaminerTheatre({ data, demo = false, autoPlay = false }: { data
   }
   return <div className="ba-theatre" style={{ '--examiner': examiner?.color || '#087e82' } as React.CSSProperties} data-testid="theatre" data-phase={finished ? 'complete' : phase.name} data-examiner={examiner?.key} data-progress={Math.round(position)}>
     <style>{CSS}</style>
-    <header className="ba-header"><Link href="/" className="ba-brand"><small>IELTS · WRITING JOURNEY</small>{t('雅思写作西游记', 'Writing Journey')}</Link>
+    <header className="ba-header"><Link href="/" className="ba-brand"><small>IELTS WRITING WEST</small>{t('雅思写作西游记', 'IELTS Writing West')}</Link>
       <button onClick={() => setLang(v => v === 'zh' ? 'en' : 'zh')} aria-label="Toggle language">{lang === 'zh' ? 'EN' : '中文'}</button>
     </header>
     <main className="ba-main">

@@ -17,7 +17,7 @@ const FEEDBACK_VOICES: Record<Criterion, string> = {
   gra: `Sha Wujing / 沙悟净: calm, brief and dependable. State the exact grammar problem, explain its effect and give the required action with few words. Chinese is plain and steady; English is concise and matter-of-fact. No theatrical catchphrases, excessive reassurance or vague one-word verdicts. Brevity must not omit evidence or the concrete next step.`,
 };
 function feedbackVoice(criterion: Criterion, fields: string): string {
-  return `CHARACTER VOICE FOR 雅思写作西游记 (IELTS Writing: Journey to the West):
+  return `CHARACTER VOICE FOR 雅思写作西游记 (IELTS Writing West):
 ${FEEDBACK_VOICES[criterion]}
 Apply this voice ONLY to ${fields}. Both Chinese and English must convey the same specific diagnosis and action naturally, not word-for-word caricature. Vary the phrasing; do not introduce yourself or repeat the character's name in every field. Keep source quotes exact. Persona must NEVER change check IDs, pass/fail thresholds, evidence, scores, correction scope, or the wording of the student's essay/replacements. A fictional character voice is presentation, not permission to invent errors. Keep the required JSON schema unchanged.`;
 }

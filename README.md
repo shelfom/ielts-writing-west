@@ -1,4 +1,4 @@
-# 雅思写作西游记 / Writing Journey
+# 雅思写作西游记 / IELTS Writing West
 
 过四关，让作文脱胎换骨。
 

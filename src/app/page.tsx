@@ -195,8 +195,8 @@ function InputFormInner() {
       <header className="border-b border-[#E5E0D5] px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div>
-            <span className="journey-brand-kicker">IELTS · WRITING JOURNEY</span>
-            <h1 className="journey-brand">{t('雅思写作西游记', 'Writing Journey')}</h1>
+            <span className="journey-brand-kicker">IELTS WRITING WEST</span>
+            <h1 className="journey-brand">{t('雅思写作西游记', 'IELTS Writing West')}</h1>
           </div>
           <LangToggle />
         </div>

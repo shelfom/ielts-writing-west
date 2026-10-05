@@ -167,7 +167,7 @@ export function CoachingWorkspace({ data, onUpdate }: { data: CoachingSubmission
   const finalText = finalView === 'original' ? data.original_text : finalView === 'model' ? state.final!.modelText : state.draftText;
 
   return <div className={`cw-root ${(round?.correction && !state.final) || replayRound?.correction ? 'cw-has-player' : ''}`} style={{ '--criterion': CAST.find(c => c.key === replayCriterion)?.color || examiner.color } as CSSProperties} data-testid="coaching-workspace" data-phase={state.phase} data-criterion={state.currentCriterion} data-revision={state.revision}>
-    <header className="cw-header"><Link href="/" className="cw-brand"><small>IELTS · WRITING JOURNEY</small>{t('雅思写作西游记', 'Writing Journey')}</Link><LangToggle /></header>
+    <header className="cw-header"><Link href="/" className="cw-brand"><small>IELTS WRITING WEST</small>{t('雅思写作西游记', 'IELTS Writing West')}</Link><LangToggle /></header>
     <main className="cw-main">
       <div className="cw-heading"><div><p className="cw-kicker">{t('过四关，让作文脱胎换骨', 'FOUR PASSES. TRANSFORM YOUR WRITING.')}</p><h1>{t('这一稿，再向前一步。', 'One draft. One step further.')}</h1></div><span className="cw-target">{t('目标', 'TARGET')} <b>{state.targetBand}</b></span></div>
       {data.assessment && <OriginalScores assessment={data.assessment} taskType={data.task_type} />}
