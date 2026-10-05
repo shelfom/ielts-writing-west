@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import { LangToggle } from '@/components/LangToggle';
+import { CharacterAvatar, JOURNEY_CAST, criterionLabel } from '@/components/journey/CharacterAvatar';
 import { useLanguage } from '@/components/LanguageContext';
 import type { Assessment, Paragraph, TaskType } from '@/lib/types';
 import type { CoachingAction, CoachingState, GateCheck } from '@/lib/coaching-types';
@@ -17,12 +18,7 @@ export type CoachingSubmission = {
   correction: { stages: ExaminerStage[]; coaching?: CoachingState } | null;
   status?: string; error_message?: string | null;
 };
-const CAST: { key: Criterion; zh: string; en: string; labelZh: string; labelEn: string; color: string }[] = [
-  { key: 'ta_tr', zh: '审题金刚', en: 'Task examiner', labelZh: '任务回应', labelEn: 'Task Response', color: '#087e82' },
-  { key: 'cc', zh: '结构金刚', en: 'Structure examiner', labelZh: '连贯与衔接', labelEn: 'Coherence & Cohesion', color: '#4566bb' },
-  { key: 'lr', zh: '词汇金刚', en: 'Vocabulary examiner', labelZh: '词汇资源', labelEn: 'Lexical Resource', color: '#a56a09' },
-  { key: 'gra', zh: '语法金刚', en: 'Grammar examiner', labelZh: '语法多样性与准确性', labelEn: 'Grammatical Range & Accuracy', color: '#a84e76' },
-];
+const CAST = JOURNEY_CAST.map(cast => ({ key: cast.key, zh: cast.nameZh, en: cast.nameEn, labelZh: cast.key === 'ta_tr' ? '任务回应' : cast.titleZh, labelEn: cast.key === 'ta_tr' ? 'Task Response' : cast.titleEn, color: cast.color, lineZh: cast.lineZh, lineEn: cast.lineEn }));
 
 export async function readSubmission(id: string): Promise<CoachingSubmission> {
   const response = await fetch(`/api/submissions/${id}`, { cache: 'no-store' });
@@ -66,7 +62,7 @@ function highlightQuotes(text: string, checks: GateCheck[], paragraphId: string)
 }
 
 export function CoachingWorkspace({ data, onUpdate }: { data: CoachingSubmission; onUpdate: (data: CoachingSubmission) => void }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const state = data.correction!.coaching!;
   const currentIndex = CAST.findIndex(c => c.key === state.currentCriterion);
   const examiner = CAST[currentIndex];
@@ -170,25 +166,25 @@ export function CoachingWorkspace({ data, onUpdate }: { data: CoachingSubmission
   const finalText = finalView === 'original' ? data.original_text : finalView === 'model' ? state.final!.modelText : state.draftText;
 
   return <div className={`cw-root ${(round?.correction && !state.final) || replayRound?.correction ? 'cw-has-player' : ''}`} style={{ '--criterion': CAST.find(c => c.key === replayCriterion)?.color || examiner.color } as CSSProperties} data-testid="coaching-workspace" data-phase={state.phase} data-criterion={state.currentCriterion} data-revision={state.revision}>
-    <header className="cw-header"><Link href="/" className="cw-brand"><small>AI WRITING LAB</small>{t('四大金刚', 'Erators')} <span>{t('ERATORS', '四大金刚')}</span></Link><LangToggle /></header>
+    <header className="cw-header"><Link href="/" className="cw-brand"><small>IELTS · WRITING JOURNEY</small>{t('雅思写作西游记', 'Writing Journey')}</Link><LangToggle /></header>
     <main className="cw-main">
-      <div className="cw-heading"><div><p className="cw-kicker">{t('雅思写作，一关一关变强', 'IELTS WRITING. STRONGER WITH EVERY ROUND.')}</p><h1>{t('你来重写。考官来把关。', 'Your ideas. Your rewrite. Four examiners.')}</h1></div><span className="cw-target">{t('目标', 'TARGET')} <b>{state.targetBand}</b></span></div>
+      <div className="cw-heading"><div><p className="cw-kicker">{t('过四关，让作文脱胎换骨', 'FOUR PASSES. TRANSFORM YOUR WRITING.')}</p><h1>{t('这一稿，再向前一步。', 'One draft. One step further.')}</h1></div><span className="cw-target">{t('目标', 'TARGET')} <b>{state.targetBand}</b></span></div>
       {data.assessment && <OriginalScores assessment={data.assessment} taskType={data.task_type} />}
       <details className="cw-question"><summary>{t('题目与原稿诊断', 'Question & original diagnosis')}</summary><p>{data.prompt_text}</p>{data.task_image_url && <img src={data.task_image_url} alt={t('原始题目图', 'Original task image')} />}{data.assessment && <p>{t(data.assessment.diagnosisZh, data.assessment.diagnosisEn)}</p>}</details>
       <nav className="cw-rail" aria-label={t('四位考官的训练进度', 'Four examiner progress')}>{CAST.map((cast, index) => {
         const complete = !!state.rounds.find(r => r.criterion === cast.key)?.correction;
-        return <button disabled={!complete || !!busy} onClick={() => setReplayCriterion(cast.key)} key={cast.key} className={`${index === currentIndex ? 'active' : ''} ${index > currentIndex ? 'locked' : ''}`} style={{ '--rail-color': cast.color } as CSSProperties} data-testid={`coaching-examiner-${cast.key}`} aria-current={index === currentIndex ? 'step' : undefined}><b>{complete ? '✓' : String(index + 1).padStart(2, '0')}</b><span>{t(cast.zh, cast.en)}<small>{index > currentIndex ? t('尚未解锁', 'Locked') : complete ? t('已完成 · 可重播', 'Done · replay') : t('当前关卡', 'Current pass')}</small></span></button>;
+        return <button disabled={!complete || !!busy} onClick={() => setReplayCriterion(cast.key)} key={cast.key} className={`${index === currentIndex ? 'active' : ''} ${index > currentIndex ? 'locked' : ''}`} style={{ '--rail-color': cast.color } as CSSProperties} data-testid={`coaching-examiner-${cast.key}`} aria-current={index === currentIndex ? 'step' : undefined}><span className="journey-rail-face"><CharacterAvatar criterion={cast.key} size={36} /><b>{complete ? '✓' : String(index + 1).padStart(2, '0')}</b></span><span className="journey-rail-name">{t(cast.zh, cast.en)}<small>{criterionLabel(cast.key, data.task_type, lang)}</small><em>{index > currentIndex ? t('尚未解锁', 'Locked') : complete ? t('已完成 · 可重播', 'Done · replay') : t('当前关卡', 'Current pass')}</em></span></button>;
       })}</nav>
       {statusLabel && <div className="cw-busy" role="status" data-testid="coaching-busy"><span className="cw-spinner" />{statusLabel}<small>{t('进度会保存；刷新不会丢失已完成的步骤。', 'Completed steps are saved and survive a refresh.')}</small></div>}
       {error && <div className="cw-error" role="alert" data-testid="coaching-error"><p>{error}</p><div>{lastAction && <button disabled={!!busy} onClick={() => void perform(lastAction)}>{t('重试这一步', 'Retry this step')}</button>}<button disabled={!!busy} onClick={async () => { try { onUpdate(await readSubmission(data.id)); setError(null); } catch (e) { setError(e instanceof Error ? e.message : 'Could not reload'); } }}>{t('读取已保存进度', 'Reload saved progress')}</button></div></div>}
 
-      {replayRound?.correction && replayRound.inputParagraphs ? <SingleStagePlayer key={`replay-${replayCriterion}`} input={replayRound.inputParagraphs} stage={replayRound.correction} autoPlay continueAction={<button className="cw-primary" data-testid="return-current" onClick={() => setReplayCriterion(null)}>{t('返回当前练习', 'Return to current practice')} →</button>} /> : state.final ? <section className="cw-final" data-testid="coaching-final">
+      {replayRound?.correction && replayRound.inputParagraphs ? <SingleStagePlayer taskType={data.task_type} key={`replay-${replayCriterion}`} input={replayRound.inputParagraphs} stage={replayRound.correction} autoPlay continueAction={<button className="cw-primary" data-testid="return-current" onClick={() => setReplayCriterion(null)}>{t('返回当前练习', 'Return to current practice')} →</button>} /> : state.final ? <section className="cw-final" data-testid="coaching-final">
         <div className="cw-final-header"><span className="cw-kicker">{t('四关完成 · 两份成果', 'FOUR PASSES COMPLETE · TWO DIFFERENT RESULTS')}</span><h2>{t('你的改稿，和一篇目标分范文。', 'Your revised essay, plus a target model.')}</h2><p>{t('你的改稿保留四关的训练过程。范文另行生成，以你完善后的观点为基础，供学习参考。', 'Your revised essay records the four passes. The separate model uses your developed ideas as a study reference.')}</p></div>
         <div className="cw-final-outcome" data-testid="target-outcome" data-target-met={state.final.targetMet}><strong>{t('范文独立估分', 'Model essay estimate')} <b>{state.final.assessment.overall.toFixed(1)}</b></strong><span>{state.final.targetMet ? t('达到本次目标估分', 'Meets this target estimate') : t('尚未达到目标估分', 'Below this target estimate')}</span><p>{t(state.final.noteZh, state.final.noteEn)}</p><small>{t('这是 AI 练习估分，不保证真实考试成绩。', 'This is an AI practice estimate, not a guarantee of an exam result.')}</small></div>
         <div className="cw-model-scores">{CAST.map(c => <span key={c.key}>{c.key === 'ta_tr' ? data.task_type === 'task2' ? 'TR' : 'TA' : c.key.toUpperCase()} <b>{state.final!.assessment.scores[c.key].score.toFixed(1)}</b></span>)}</div>
         <div className="cw-paper"><div className="cw-paper-heading"><div className="cw-tabs">{(['student', 'original', 'model'] as const).map(v => <button data-testid={`final-tab-${v}`} key={v} aria-pressed={finalView === v} onClick={() => setFinalView(v)}>{v === 'student' ? t('你的改稿', 'Your revised essay') : v === 'original' ? t('原稿', 'Original') : t('目标分范文', 'Target model')}</button>)}</div><button className="cw-copy" data-testid="copy-final" onClick={() => void copy(finalText)}>{copied ? t('已复制', 'Copied') : t('复制', 'Copy')}</button></div><div className="cw-document" data-testid="final-document">{finalText.split(/\n\s*\n/).map((p, i) => <p key={i}>{p}</p>)}</div></div>
         <Link className="cw-new-practice" href="/">{t('开始下一篇练习', 'Start another essay')} →</Link>
-      </section> : round?.correction && round.inputParagraphs ? <SingleStagePlayer key={`${state.currentCriterion}-${state.revision}`} input={round.inputParagraphs} stage={round.correction} autoPlay={playRevision === state.revision} continueAction={nextAction} /> : <div className="cw-columns">
+      </section> : round?.correction && round.inputParagraphs ? <SingleStagePlayer taskType={data.task_type} key={`${state.currentCriterion}-${state.revision}`} input={round.inputParagraphs} stage={round.correction} autoPlay={playRevision === state.revision} continueAction={nextAction} /> : <div className="cw-columns">
         <section className="cw-paper">
           <div className="cw-paper-heading"><span>{t('你的稿件', 'YOUR DRAFT')} <small>v{state.revision + 1}</small></span><div className="cw-tabs"><button aria-pressed={editorView === 'marked'} onClick={() => setEditorView('marked')}>{t('查看标记', 'Marked draft')}</button>{canEdit && <button data-testid="open-editor" aria-pressed={editorView === 'edit'} onClick={editNow}>{t('直接重写', 'Rewrite here')}</button>}<button aria-pressed={editorView === 'original'} onClick={() => setEditorView('original')}>{t('原稿', 'Original')}</button></div></div>
           {editorView === 'edit' && canEdit ? <div className="cw-editor-wrap">
@@ -202,11 +198,11 @@ export function CoachingWorkspace({ data, onUpdate }: { data: CoachingSubmission
           {state.phase === 'practice_paused' && <button className="cw-text-action" onClick={() => void copy(state.draftText)}>{copied ? t('已复制', 'Copied') : t('复制当前稿件', 'Copy current draft')}</button>}
         </section>
         <aside className="cw-feedback" data-testid="coaching-feedback">
-          <span className="cw-kicker">{String(currentIndex + 1).padStart(2, '0')} / 04 · {t(examiner.zh, examiner.en)}</span>
+          <div className="journey-workspace-persona"><CharacterAvatar criterion={state.currentCriterion} size={48} /><div><span className="cw-kicker">{t('AI 角色 · 第', 'AI CHARACTER · CHAPTER ')}{currentIndex + 1}{t('关', '')}</span><strong>{t(examiner.zh, examiner.en)}</strong><span className="journey-feedback-criterion">{criterionLabel(state.currentCriterion, data.task_type, lang)}</span></div></div><p className="journey-persona-line">{t(examiner.lineZh, examiner.lineEn)}</p>
           <h2>{state.phase === 'practice_paused' ? t('先停一下，把问题练透。', 'Pause this round. Work on the essentials.') : state.phase === 'ready_to_correct' ? t('过关。现在只精修这一项。', 'Passed. Now refine this criterion.') : review && !review.passed ? t('先重写，这一关还没过。', 'Rewrite first. This pass is not cleared.') : t('先看标准，再看问题。', 'The rules come first.')}</h2>
           <p className="cw-verdict" data-testid="review-summary">{review ? t(review.summaryZh, review.summaryEn) : t('三条全部通过，才由考官做少量修改。其他项目留给后面的考官。', 'All three checks must pass before the examiner makes small corrections. Later criteria stay with later examiners.')}</p>
           {review && !reviewIsCurrent && canEdit && <p className="cw-local-note">{t('以下是上一稿的意见。新稿已保存，等待重新检查。', 'This feedback is for your previous draft. The saved rewrite needs a new review.')}</p>}
-          <div className="cw-gate-rule"><strong>{t('固定过关线：3 / 3', 'FIXED GATE: 3 / 3')}</strong><span>{t('这是训练门槛，不是 IELTS 官方分数线。', 'This is a training gate, not an official IELTS cutoff.')}</span><span>{t('改写若破坏已过关的项目，会回到对应关卡；历史保留。', 'A rewrite that undoes an earlier pass reopens that pass; history is kept.')}</span></div>
+          <div className="cw-gate-rule"><strong>{t('固定过关线：3 / 3', 'FIXED GATE: 3 / 3')}</strong><span>{t('这是训练门槛，不是 IELTS 官方分数线。', 'This is a training gate, not an official IELTS cutoff.')}</span><a className="cw-rubric-link" href="https://ielts.org/cdn/ielts-guides/ielts-writing-band-descriptors.pdf" target="_blank" rel="noreferrer">{t('IELTS 官方评分标准 ↗', 'Official IELTS descriptors ↗')}</a><span>{t('改写若破坏已过关的项目，会回到对应关卡；历史保留。', 'A rewrite that undoes an earlier pass reopens that pass; history is kept.')}</span></div>
           <ol className="cw-checks">{rubric.map((rule, index) => {
             const result = review?.checks.find(check => check.id === rule.id);
             return <li key={rule.id} data-testid={`gate-${rule.id}`} data-passed={result?.passed === undefined ? 'pending' : String(result.passed)} className={result ? result.passed ? 'passed' : 'failed' : ''}>
@@ -220,7 +216,7 @@ export function CoachingWorkspace({ data, onUpdate }: { data: CoachingSubmission
           {state.phase === 'practice_paused' && <div className="cw-paused" data-testid="practice-paused"><p>{t('三次未通过。你的稿件和意见都已保存。先按这份计划练习，再用新稿开始下一轮。', 'Three failed reviews. Your draft and feedback are saved. Practise with this plan, then start a fresh round with a new draft.')}</p><button className="cw-primary" data-testid="copy-plan" onClick={() => void copy(planText)}>{copied ? t('已复制', 'Copied') : t('复制稿件与练习计划', 'Copy draft & practice plan')}</button><Link href="/">{t('开始新一轮练习', 'Start a fresh practice')} →</Link></div>}
         </aside>
       </div>}
-      {!round?.correction && !state.final && !replayRound?.correction && <div className="cw-mobile-pin"><strong>{t(examiner.zh, examiner.en)} · {busy ? t('检查中', 'Working') : state.phase === 'ready_to_correct' ? t('3 / 3 通过', '3 / 3 passed') : `${review?.checks.filter(c => c.passed).length || 0} / 3`}</strong><span>{busy ? statusLabel : review ? t(review.checks.find(c => !c.passed)?.actionZh || review.summaryZh, review.checks.find(c => !c.passed)?.actionEn || review.summaryEn) : t('全部通过后，才开始精修。', 'All checks must pass before corrections.')}</span></div>}
+      {!round?.correction && !state.final && !replayRound?.correction && <div className="cw-mobile-pin"><strong>{t(examiner.zh, examiner.en)} · {criterionLabel(state.currentCriterion, data.task_type, lang)} · {busy ? t('检查中', 'Working') : state.phase === 'ready_to_correct' ? t('3 / 3 通过', '3 / 3 passed') : `${review?.checks.filter(c => c.passed).length || 0} / 3`}</strong><span>{busy ? statusLabel : review ? t(review.checks.find(c => !c.passed)?.actionZh || review.summaryZh, review.checks.find(c => !c.passed)?.actionEn || review.summaryEn) : t('全部通过后，才开始精修。', 'All checks must pass before corrections.')}</span></div>}
     </main>
   </div>;
 }

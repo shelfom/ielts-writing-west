@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '四大金刚 · Erators | 雅思写作，一关一关变强',
-  description: '四位 AI 考官，四轮写作闯关。先读懂评分规则，再亲手改写，最后看见每一处进步。IELTS writing. Stronger with every round.',
+  title: '雅思写作西游记 · Writing Journey | 过四关，让作文脱胎换骨',
+  description: '跟着唐僧、孙悟空、猪八戒、沙僧四位 AI 写作教练，读懂评分规则，亲手改写，逐关精修。Four passes. Transform your IELTS writing.',
 };
 
 export default function RootLayout({

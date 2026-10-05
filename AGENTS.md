@@ -1,4 +1,4 @@
-# AGENTS.md - 四大金刚 / Erators
+# AGENTS.md - 雅思写作西游记 / Writing Journey
 
 ## Current coaching flow (2026-10-05)
 

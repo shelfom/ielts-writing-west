@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLanguage } from '@/components/LanguageContext';
+import { CharacterAvatar, JOURNEY_CAST, criterionLabel } from '@/components/journey/CharacterAvatar';
 import { phaseAt, type ExaminerStage, type Paragraph, type Piece } from '../theatre/theatre-engine';
 import { buildStageFilm } from './single-stage-film';
 
-export function SingleStagePlayer({ input, stage, autoPlay, continueAction }: {
-  input: Paragraph[]; stage: ExaminerStage; autoPlay: boolean; continueAction: ReactNode;
+export function SingleStagePlayer({ input, stage, autoPlay, continueAction, taskType }: {
+  input: Paragraph[]; stage: ExaminerStage; autoPlay: boolean; continueAction: ReactNode; taskType: string;
 }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const character = JOURNEY_CAST.find(c => c.key === stage.criterion)!;
   const film = useMemo(() => buildStageFilm(input, stage), [input, stage]);
   const [position, setPosition] = useState(0);
   const [playing, setPlaying] = useState(autoPlay);
@@ -56,6 +58,7 @@ export function SingleStagePlayer({ input, stage, autoPlay, continueAction }: {
         <div className="cw-document" data-testid="stage-document">{input.map((p, i) => <p key={p.id} data-testid="stage-paragraph" className={shot.paragraphId === p.id && !finished && view === 'motion' ? 'cw-active-paragraph' : ''} ref={shot.paragraphId === p.id ? activeRef : undefined}>{view === 'before' ? p.text : view === 'after' || finished ? film.final[i].text : film.pieces[p.id].map(renderPiece)}</p>)}</div>
       </section>
       <aside className="cw-feedback cw-motion-feedback">
+        <div className="journey-workspace-persona"><CharacterAvatar criterion={stage.criterion} size={48} /><div><span className="cw-kicker">{t('AI 角色', 'AI CHARACTER')}</span><strong>{t(character.nameZh, character.nameEn)}</strong><span className="journey-feedback-criterion">{criterionLabel(stage.criterion, taskType, lang)}</span></div></div>
         <span className="cw-kicker">{finished ? t('本关完成', 'PASS COMPLETE') : t('改哪里，为什么', 'WHAT CHANGES, AND WHY')}</span>
         <h2>{finished ? t('这一关，走完了。', 'One criterion stronger.') : t('看清每一处修改。', 'Watch each correction.')}</h2>
         <p>{t(stage.diagnosisZh, stage.diagnosisEn)}</p>

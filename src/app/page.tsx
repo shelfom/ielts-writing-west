@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
 import { LangToggle } from '@/components/LangToggle';
+import { CharacterAvatar, JOURNEY_CAST, criterionLabel } from '@/components/journey/CharacterAvatar';
 
 function InputFormInner() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const router = useRouter();
   const [taskType, setTaskType] = useState<'academic1' | 'general1' | 'task2'>('task2');
   const [targetBand, setTargetBand] = useState<7 | 8 | 9>(7);
@@ -189,13 +190,13 @@ function InputFormInner() {
   }, [taskType, targetBand, promptText, essayText, taskImage, essayImages, ocrConfirmed, router, t]);
 
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="journey-home min-h-screen bg-ivory">
       {/* Header */}
       <header className="border-b border-[#E5E0D5] px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div>
-            <span className="text-xs tracking-widest uppercase text-[#9CA3AF] zh-font">ERATORS · WRITING LAB</span>
-            <h1 className="text-[27px] font-bold tracking-wide text-[#172020]">{t('四大金刚', 'Erators')}</h1>
+            <span className="journey-brand-kicker">IELTS · WRITING JOURNEY</span>
+            <h1 className="journey-brand">{t('雅思写作西游记', 'Writing Journey')}</h1>
           </div>
           <LangToggle />
         </div>
@@ -205,31 +206,31 @@ function InputFormInner() {
       <main className="max-w-4xl mx-auto px-6 py-12">
         {/* Hero */}
         <div className="mb-12">
-          <h2 className="text-3xl md:text-4xl font-light text-[#172020] zh-font leading-tight mb-3">
-            {t('雅思写作，一关一关变强。', 'IELTS writing. Stronger with every round.')}
+          <p className="journey-prologue"><span className="journey-seal">修</span>{t('一篇作文，四重修炼', 'ONE ESSAY. FOUR CHAPTERS.')}</p>
+          <h2 className="journey-hero-title">
+            {lang === 'zh' ? <><span>过四关，</span><wbr /><span className="whitespace-nowrap">让作文脱胎换骨。</span></> : 'Four passes. Transform your writing.'}
           </h2>
-          <p className="text-[#9CA3AF] text-sm zh-font">
-            {t('四位 AI 考官，一次只练一项。先指出关键问题，由你重写；过关后，看考官逐句精修。', 'Four AI examiners. One criterion at a time. You fix the major problems; then watch focused corrections happen.')}
+          <p className="text-[#627064] text-sm leading-7 zh-font">
+            {t('跟着唐僧、孙悟空、猪八戒、沙僧，一次攻克一项写作标准。先由你重写关键问题，过关后再看逐句精修。', 'Join Tang Sanzang, Sun Wukong, Zhu Bajie and Sha Wujing. Tackle one writing criterion at a time: rewrite the major problems, then watch focused corrections.')}
           </p>
           <p className="mt-3 text-sm leading-7 text-[#59635c] zh-font">
             {t('读懂评分规则，把每一稿写得更有把握。', 'Learn the scoring rules and make each draft more deliberate.')}
           </p>
-          <div className="grid grid-cols-4 gap-2 mt-7" aria-label={t('四项写作训练', 'Four writing disciplines')}>
-            {[
-              { number: '01', zh: '审题', en: 'Task', color: '#087e82' },
-              { number: '02', zh: '结构', en: 'Structure', color: '#4566bb' },
-              { number: '03', zh: '词汇', en: 'Vocabulary', color: '#a56a09' },
-              { number: '04', zh: '语法', en: 'Grammar', color: '#a84e76' },
-            ].map(pass => <div key={pass.number} className="border-t-2 pt-3 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3" style={{ borderColor: pass.color, color: pass.color }}>
-              <span className="text-2xl essay-font">{pass.number}</span><span className="text-xs sm:text-sm font-medium zh-font">{t(pass.zh, pass.en)}</span>
+          <div className="journey-home-cast" aria-label={t('四位 AI 角色与写作标准', 'Four AI characters and writing criteria')}>
+            {JOURNEY_CAST.map((cast, index) => <div key={cast.key} className="journey-cast-card" style={{ '--cast-color': cast.color } as React.CSSProperties}>
+              <div className="journey-cast-top"><CharacterAvatar criterion={cast.key} size={64} /><span className="journey-chapter-number">0{index + 1}</span></div>
+              <h3>{t(cast.nameZh, cast.nameEn)}</h3>
+              <span className="journey-cast-criterion">{criterionLabel(cast.key, taskType, lang)}</span>
+              <p>{t(cast.mannerZh, cast.mannerEn)}</p>
             </div>)}
           </div>
+          <p className="journey-ai-note">{t('四位角色均为 AI 写作教练，依据公开评分标准开展训练。', 'Four fictional AI writing coaches, guided by the public scoring criteria.')} <a href="https://ielts.org/cdn/ielts-guides/ielts-writing-band-descriptors.pdf" target="_blank" rel="noreferrer" className="underline underline-offset-4">{t('IELTS 官方评分标准 ↗', 'Official IELTS descriptors ↗')}</a></p>
         </div>
 
         {/* Demo Cards */}
         <div className="mb-12">
           <h2 className="text-sm tracking-widest uppercase text-[#9CA3AF] zh-font mb-4">
-            {t('先试一篇，看看考官怎么把关', 'Try an essay. Meet the examiners.')}
+            {t('取一篇练习稿，启程', 'Choose a practice essay. Begin the journey.')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(['task1', 'task2'] as const).map(slug => <div key={slug} className="p-6 border border-[#E5E0D5] rounded bg-white">
@@ -449,7 +450,7 @@ function InputFormInner() {
           >
             {isSubmitting
               ? t('处理中...', 'Processing...')
-              : t('开始四关训练', 'Start the four examiner passes')
+              : t('启程，开始闯关', 'Begin the four passes')
             }
           </button>
 

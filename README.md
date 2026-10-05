@@ -1,8 +1,8 @@
-# 四大金刚 / Erators
+# 雅思写作西游记 / Writing Journey
 
-雅思写作，一关一关变强。
+过四关，让作文脱胎换骨。
 
-IELTS writing practice with four sequential examiner passes. Students receive original scores, rewrite serious problems themselves, and unlock a small correction only after passing the current examiner's published checks.
+IELTS writing practice with four fictional AI coaches: patient Tang Sanzang (Task Achievement/Response), sharp Sun Wukong (Coherence & Cohesion), friendly Zhu Bajie (Lexical Resource), and concise Sha Wujing (Grammatical Range & Accuracy). Students receive original scores, rewrite serious problems themselves, and unlock a small correction only after passing the current examiner's published checks.
 
 ## Coaching policy
 
