@@ -7,6 +7,7 @@ import { createLLMClient, extractHeaders, MODEL_ID } from '@/lib/llm';
 import { getStorage } from '@/lib/storage';
 import { buildAssessmentPrompt, getCriterionLabels } from '@/lib/prompts';
 import { computeOverall } from '@/lib/scoring';
+import { coachingJSONMessages } from '@/lib/coaching-json-retry';
 import { buildGatePrompt, buildAnchoredPrompt, buildScopePrompt, buildTargetModelPrompt, buildCorrectionRetryFeedback } from '@/lib/coaching-prompts';
 import { advanceCriterion, applyAnchoredCorrection, parseJSON, recordCorrection, recordReview, rewriteDraft, reopenCriterion, validateDraft, validateReview, validateScopeAudit } from '@/lib/coaching-validation';
 import { CRITERION_ORDER, type Criterion } from '@/lib/examiner-validation';
@@ -80,18 +81,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (error || !upload?.storage_key) throw new Error('Unable to load your original task image. Please retry.');
       imagePart = { type: 'image_url', image_url: { url: await getStorage().generatePresignedUrl({ key: upload.storage_key, expireTime: 3600 }), detail: 'high' } };
     }
-    const invoke = async (prompt: string): Promise<unknown> => {
+    const invokeRaw = async (prompt: string, previousResponse?: string, validationError?: string): Promise<string> => {
       const content: ContentPart[] = [{ type: 'text', text: prompt }, ...(imagePart ? [imagePart] : [])];
-      const result = await model.invoke([{ role: 'user', content: content as unknown as string }], { model: MODEL_ID, temperature: 0.1, thinking: 'disabled', caching: 'disabled' });
-      return parseJSON(result.content);
+      const messages = coachingJSONMessages(content, previousResponse, validationError);
+      const result = await model.invoke(messages.map(message => ({ ...message, content: message.content as unknown as string })), { model: MODEL_ID, temperature: 0.1, thinking: 'disabled', caching: 'disabled' });
+      return result.content;
     };
+    const invoke = async (prompt: string): Promise<unknown> => parseJSON(await invokeRaw(prompt));
     const validated = async <T,>(prompt: string, validate: (value: unknown) => T): Promise<T> => {
-      let feedback = '';
+      let previousResponse: string | undefined;
+      let validationError: string | undefined;
       for (let attempt = 0; attempt < 2; attempt++) {
-        try { return validate(await invoke(prompt + feedback)); }
-        catch (error) {
+        try {
+          previousResponse = await invokeRaw(prompt, previousResponse, validationError);
+          return validate(parseJSON(previousResponse));
+        } catch (error) {
           if (attempt === 1) throw error;
-          feedback = `\nYour previous output was rejected: ${error instanceof Error ? error.message : 'invalid output'}. Return the required JSON and satisfy these validation rules. Do not invent evidence or change the fixed readiness threshold.`;
+          validationError = error instanceof Error ? error.message : 'Model response could not be parsed or validated';
         }
       }
       throw new Error('Model validation failed');
