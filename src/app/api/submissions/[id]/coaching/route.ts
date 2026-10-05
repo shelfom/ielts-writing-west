@@ -7,7 +7,7 @@ import { createLLMClient, extractHeaders, MODEL_ID } from '@/lib/llm';
 import { getStorage } from '@/lib/storage';
 import { buildAssessmentPrompt, getCriterionLabels } from '@/lib/prompts';
 import { computeOverall } from '@/lib/scoring';
-import { buildGatePrompt, buildAnchoredPrompt, buildScopePrompt, buildTargetModelPrompt } from '@/lib/coaching-prompts';
+import { buildGatePrompt, buildAnchoredPrompt, buildScopePrompt, buildTargetModelPrompt, buildCorrectionRetryFeedback } from '@/lib/coaching-prompts';
 import { advanceCriterion, applyAnchoredCorrection, parseJSON, recordCorrection, recordReview, rewriteDraft, reopenCriterion, validateDraft, validateReview, validateScopeAudit } from '@/lib/coaching-validation';
 import { CRITERION_ORDER, type Criterion } from '@/lib/examiner-validation';
 import type { CoachingCorrection, CoachingState, GateReview } from '@/lib/coaching-types';
@@ -129,15 +129,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (body.action === 'correct') {
       let feedback = '';
       for (let attempt = 0; attempt < 2; attempt++) {
+        let attemptedProposal: unknown;
+        let attemptedAudit: unknown;
         try {
-          const { proposal, stage } = applyAnchoredCorrection(await invoke(buildAnchoredPrompt(taskType, state.currentCriterion, row.prompt_text, state.paragraphs) + feedback), state.paragraphs, state.currentCriterion);
+          attemptedProposal = await invoke(buildAnchoredPrompt(taskType, state.currentCriterion, row.prompt_text, state.paragraphs) + feedback);
+          const { proposal, stage } = applyAnchoredCorrection(attemptedProposal, state.paragraphs, state.currentCriterion);
           // A genuinely independent second model call must approve actual changes.
-          if (proposal.edits.length) validateScopeAudit(await invoke(buildScopePrompt(taskType, state.currentCriterion, row.prompt_text, state.paragraphs, proposal)), proposal.edits.length);
+          if (proposal.edits.length) {
+            attemptedAudit = await invoke(buildScopePrompt(taskType, state.currentCriterion, row.prompt_text, state.paragraphs, proposal));
+            validateScopeAudit(attemptedAudit, proposal.edits.length);
+          }
           next = recordCorrection(state, { ...stage, duration_ms: Date.now() - started, provider_model: MODEL_ID });
           break;
         } catch (error) {
           if (attempt === 1) throw error;
-          feedback = `\nThe previous proposal was rejected: ${error instanceof Error ? error.message : 'invalid correction'}. Produce a new minimal proposal respecting the exact remit; do not hide cross-criterion edits in wider anchors.`;
+          feedback = buildCorrectionRetryFeedback(attemptedProposal, attemptedAudit, error instanceof Error ? error.message : 'invalid correction');
         }
       }
     }
