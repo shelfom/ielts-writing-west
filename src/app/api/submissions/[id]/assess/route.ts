@@ -7,6 +7,7 @@ import { computeOverall } from '@/lib/scoring';
 import { getStorage } from '@/lib/storage';
 import { z } from 'zod';
 import { parseJSON } from '@/lib/coaching-validation';
+import { assessmentMessages } from '@/lib/assessment-retry';
 import type { Assessment, TaskType, ContentPart } from '@/lib/types';
 
 const assessmentSchema = z.object({
@@ -46,14 +47,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       parts.push({ type: 'image_url', image_url: { url, detail: 'high' } });
     }
     let raw: z.infer<typeof assessmentSchema> | undefined;
-    let feedback = '';
+    let previousResponse: string | undefined;
+    let validationError: string | undefined;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const response = await llm.invoke([{ role: 'user', content: parts.map(p => p.type === 'text' ? { ...p, text: p.text + feedback } : p) as unknown as string }], { model: MODEL_ID, temperature: 0.1, thinking: 'disabled', caching: 'disabled' });
-        raw = assessmentSchema.parse(parseJSON(response.content)); break;
+        const messages = assessmentMessages(parts, previousResponse, validationError);
+        const response = await llm.invoke(messages.map(message => ({ ...message, content: message.content as unknown as string })), { model: MODEL_ID, temperature: 0.1, thinking: 'disabled', caching: 'disabled' });
+        previousResponse = response.content;
+        raw = assessmentSchema.parse(parseJSON(previousResponse)); break;
       } catch (error) {
         if (attempt === 1) throw error;
-        feedback = '\nReturn ONLY the exact requested JSON, with four integer scores 0–9 and both diagnoses. Previous output could not be validated.';
+        validationError = error instanceof Error ? error.message : 'Assessment response could not be parsed or validated';
       }
     }
     if (!raw) throw new Error('Assessment could not be validated');

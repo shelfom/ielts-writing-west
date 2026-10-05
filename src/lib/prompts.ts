@@ -126,6 +126,9 @@ ${taskGuidance}
 8. Do NOT claim "by + past time requires past perfect", do NOT require optional commas, and do NOT treat natural synonyms (e.g., experienced/saw, increased/rose) as errors
 9. Each criterion judgement must concern only that criterion: subject-verb agreement, plural nouns and comparatives are GRA; factual/unit errors are TA/TR
 
+## JSON formatting
+Return syntactically valid JSON. Use double quotes for property names and JSON string delimiters, and properly escape double quotes, backslashes and control characters inside string values. When citing phrases in explanations, use single quotes around the cited phrase to avoid unescaped double quotes inside JSON strings. Never invent fallback scores to satisfy the format.
+
 ## Output Format (strict JSON)
 \`\`\`json
 {
