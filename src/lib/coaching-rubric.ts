@@ -10,7 +10,7 @@ export const COACHING_RUBRIC: Record<Criterion, RubricCheck[]> = {
   ],
   cc: [
     { id: 'progression', titleZh: '思路顺序清楚', titleEn: 'Make the progression understandable', ruleZh: '读者能跟上整体思路，不强制五段式或固定提纲。', ruleEn: 'The overall line of thought is understandable; no compulsory five-paragraph structure or imposed outline.' },
-    { id: 'paragraph_focus', titleZh: '每段有明确重心', titleEn: 'Give paragraphs a clear focus', ruleZh: '主要段落能辨认出中心内容，不把不同论点杂乱堆放。', ruleEn: 'Paragraph groups have an identifiable focus rather than repeatedly mixing unrelated main ideas.' },
+    { id: 'paragraph_focus', titleZh: '每段有明确重心', titleEn: 'Give paragraphs a clear focus', ruleZh: '主要段落能辨认出中心内容。只有重心无法辨认，或反复混杂无关的主要论点才不过关；重心清楚时，个别稍偏题的句子、相关的实施细节或小结不算重大问题。', ruleEn: 'Fail only when a main paragraph has no identifiable focus or repeatedly mixes unrelated main ideas. An isolated slightly tangential sentence, relevant implementation detail or wrap-up is minor when the paragraph focus remains clear.' },
     { id: 'relations', titleZh: '衔接不反复误导', titleEn: 'Keep connections and references clear', ruleZh: '连接关系与代词指代不能反复误导读者；不规定连接词数量。', ruleEn: 'Links and references do not repeatedly mislead the reader; no linker quota.' },
   ],
   lr: [
