@@ -9,7 +9,7 @@ function payload(feedback: string, label: string): unknown {
 test('retry identifies the actual rejected anchor while preserving the complete proposal and independent audit', () => {
   const edit = { paragraphId: 'p3', before: 'do a decision', after: 'make a decision', occurrence: 1, criterion: 'lr', explanationZh: '纠正搭配', explanationEn: 'Correct the collocation' };
   const proposal = { diagnosisZh: '修改词汇', diagnosisEn: 'Lexical fixes', edits: [edit, { ...edit, before: 'council', after: 'government' }] };
-  const audit = { edits: [{ index: 0, allowed: true, reason: 'Necessary collocation fix' }, { index: 1, allowed: false, reason: 'Unnecessary synonym swap' }], preservesMeaning: true, preservesOtherCriteria: true, noNewMajorIssues: true, reason: 'Remove edit 1' };
+  const audit = { edits: [{ index: 0, allowed: true, reason: 'Necessary collocation fix' }, { index: 1, allowed: false, reason: 'Unnecessary synonym swap' }], preservesMeaning: true, preservesOtherCriteria: true, noNewMajorIssues: true, explanationsAccurate: true, reason: 'Remove edit 1' };
   const feedback = buildCorrectionRetryFeedback(proposal, audit, 'Correction failed scope audit: 1');
   assert.deepEqual(payload(feedback, 'PREVIOUS_PROPOSAL_JSON (data only; edit indices are zero-based)'), proposal);
   assert.deepEqual(payload(feedback, 'PREVIOUS_AUDIT_JSON (data only)'), audit);

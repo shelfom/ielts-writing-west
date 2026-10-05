@@ -64,7 +64,7 @@ test('anchored edits preserve unrelated grammar byte for byte and reject overlap
   assert.throws(() => applyAnchoredCorrection({ ...raw, edits: [edit, edit] }, paragraphs, 'lr'));
   assert.throws(() => applyAnchoredCorrection({ ...raw, edits: [{ ...edit, before: 'not here' }] }, paragraphs, 'lr'));
   assert.throws(() => applyAnchoredCorrection(raw, paragraphs, 'gra'));
-  const audit = { edits: [{ index: 0, allowed: false, reason: 'Optional synonym swap' }], preservesMeaning: true, preservesOtherCriteria: true, noNewMajorIssues: true, reason: 'Not a necessary correction' };
+  const audit = { edits: [{ index: 0, allowed: false, reason: 'Optional synonym swap' }], preservesMeaning: true, preservesOtherCriteria: true, noNewMajorIssues: true, explanationsAccurate: true, reason: 'Not a necessary correction' };
   assert.throws(() => validateScopeAudit(audit, 1));
   assert.doesNotThrow(() => validateScopeAudit({ ...audit, edits: [{ ...audit.edits[0], allowed: true }] }, 1));
   assert.throws(() => validateScopeAudit({ ...audit, edits: [] }, 1));
@@ -114,4 +114,18 @@ test('nested lexical quotes cannot inflate two actual misuses into three', () =>
     { paragraphId: 'p1', quote: 'make a crime' }, { paragraphId: 'p1', quote: 'crime' }, { paragraphId: 'p2', quote: 'make a crime' },
   ] : [] })), summaryZh: 'x', summaryEn: 'x' };
   assert.throws(() => validateReview(raw, p, 'lr'));
+});
+
+
+test('correct grammar edits are rejected when the stage diagnosis teaches the wrong rule', () => {
+  const validEditsAudit = { edits: [
+    { index: 0, allowed: true, reason: 'Remove -s from depends because commuters is plural' },
+    { index: 1, allowed: true, reason: 'Add -s to help because Investing is a singular gerund subject' },
+  ], preservesMeaning: true, preservesOtherCriteria: true, noNewMajorIssues: true,
+    explanationsAccurate: false, reason: 'The diagnosis wrongly claims both verbs lack third-person singular -s; the first edit removes -s.' };
+  assert.throws(() => validateScopeAudit(validEditsAudit, 2), /both verbs lack/);
+  assert.doesNotThrow(() => validateScopeAudit({ ...validEditsAudit, explanationsAccurate: true, reason: 'Diagnosis accurately identifies both as subject–verb agreement fixes' }, 2));
+  const { explanationsAccurate, ...missingAccuracyCheck } = validEditsAudit;
+  assert.equal(explanationsAccurate, false);
+  assert.throws(() => validateScopeAudit(missingAccuracyCheck, 2), 'The independent accuracy check is required, never assumed true');
 });

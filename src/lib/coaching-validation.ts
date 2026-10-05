@@ -120,12 +120,12 @@ export function applyAnchoredCorrection(raw: unknown, paragraphs: Paragraph[], c
   validateDraft(output.map(p => p.correctedText).join('\n\n'));
   return { proposal, stage: { criterion, diagnosisZh: proposal.diagnosisZh, diagnosisEn: proposal.diagnosisEn, paragraphs: output } };
 }
-export const scopeAuditSchema = z.object({ edits: z.array(z.object({ index: z.number().int().min(0), allowed: z.boolean(), reason: shortText }).strict()), preservesMeaning: z.boolean(), preservesOtherCriteria: z.boolean(), noNewMajorIssues: z.boolean(), reason: shortText }).strict();
+export const scopeAuditSchema = z.object({ edits: z.array(z.object({ index: z.number().int().min(0), allowed: z.boolean(), reason: shortText }).strict()), preservesMeaning: z.boolean(), preservesOtherCriteria: z.boolean(), noNewMajorIssues: z.boolean(), explanationsAccurate: z.boolean(), reason: shortText }).strict();
 export function validateScopeAudit(raw: unknown, editCount: number): void {
   const audit = scopeAuditSchema.parse(raw);
   if (audit.edits.length !== editCount || new Set(audit.edits.map(e => e.index)).size !== editCount || audit.edits.some(e => e.index >= editCount)) throw new Error('Scope audit must check every edit exactly once');
   const invalid = audit.edits.filter(e => !e.allowed);
-  if (invalid.length || !audit.preservesMeaning || !audit.preservesOtherCriteria || !audit.noNewMajorIssues) throw new Error(`Correction failed scope audit: ${invalid.map(e => `${e.index}: ${e.reason}`).join('; ')} ${audit.reason}`);
+  if (invalid.length || !audit.preservesMeaning || !audit.preservesOtherCriteria || !audit.noNewMajorIssues || !audit.explanationsAccurate) throw new Error(`Correction failed scope audit: ${invalid.map(e => `${e.index}: ${e.reason}`).join('; ')} ${audit.reason}`);
 }
 export function recordCorrection(state: CoachingState, stage: ExaminerStage): CoachingState {
   const review = state.rounds.find(r => r.criterion === state.currentCriterion)?.reviews.find(r => r.revision === state.revision);
