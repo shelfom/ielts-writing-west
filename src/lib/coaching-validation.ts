@@ -118,6 +118,12 @@ export function applyAnchoredCorrection(raw: unknown, paragraphs: Paragraph[], c
     return { paragraphId: p.id, correctedText, reasons: edits.map(e => ({ criterion, quote: e.before, explanationZh: e.explanationZh, explanationEn: e.explanationEn })) };
   });
   validateDraft(output.map(p => p.correctedText).join('\n\n'));
+  if (proposal.edits.length) {
+    // Aggregate prose can contradict correct edits (for example, calling mixed add/remove-s edits
+    // two missing-s errors). Reuse the actual per-edit AI explanations in both audit and playback.
+    proposal.diagnosisZh = [...new Set(proposal.edits.map(edit => edit.explanationZh))].slice(0, 3).join('\n\n');
+    proposal.diagnosisEn = [...new Set(proposal.edits.map(edit => edit.explanationEn))].slice(0, 3).join('\n\n');
+  }
   return { proposal, stage: { criterion, diagnosisZh: proposal.diagnosisZh, diagnosisEn: proposal.diagnosisEn, paragraphs: output } };
 }
 export const scopeAuditSchema = z.object({ edits: z.array(z.object({ index: z.number().int().min(0), allowed: z.boolean(), reason: shortText }).strict()), preservesMeaning: z.boolean(), preservesOtherCriteria: z.boolean(), noNewMajorIssues: z.boolean(), explanationsAccurate: z.boolean(), reason: shortText }).strict();

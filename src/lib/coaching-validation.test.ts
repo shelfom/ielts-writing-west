@@ -129,3 +129,28 @@ test('correct grammar edits are rejected when the stage diagnosis teaches the wr
   assert.equal(explanationsAccurate, false);
   assert.throws(() => validateScopeAudit(missingAccuracyCheck, 2), 'The independent accuracy check is required, never assumed true');
 });
+
+
+test('audited and saved stage diagnoses reuse exact per-edit explanations instead of a false aggregate', () => {
+  const input = [{ id: 'p1', text: 'Commuters depends on buses. Investing in transport help them.' }];
+  const raw = { diagnosisZh: '两处主语都是单数，动词都缺少s。', diagnosisEn: 'Both singular subjects require a missing -s.', edits: [
+    { paragraphId: 'p1', before: 'depends', after: 'depend', occurrence: 1, criterion: 'gra', explanationZh: 'Commuters是复数，depends去掉s。', explanationEn: 'Commuters is plural, so remove -s from depends.' },
+    { paragraphId: 'p1', before: 'help', after: 'helps', occurrence: 1, criterion: 'gra', explanationZh: 'Investing in transport是单数动名词短语，help加s。', explanationEn: 'Investing in transport is a singular gerund phrase, so add -s to help.' },
+  ] };
+  const result = applyAnchoredCorrection(raw, input, 'gra');
+  for (const language of ['Zh', 'En'] as const) {
+    const expected = raw.edits.map(edit => edit[`explanation${language}`]).join('\n\n');
+    assert.equal(result.proposal[`diagnosis${language}`], expected, 'Independent auditor receives the explanations of the actual edits');
+    assert.equal(result.stage[`diagnosis${language}`], expected, 'Saved playback cannot contain the discarded false aggregate');
+    assert.notEqual(result.stage[`diagnosis${language}`], raw[`diagnosis${language}`]);
+  }
+  assert.equal(raw.diagnosisEn, 'Both singular subjects require a missing -s.', 'Raw proposal remains available unchanged for exact retry context');
+  assert.equal(result.stage.paragraphs[0].correctedText, 'Commuters depend on buses. Investing in transport helps them.');
+});
+
+test('an empty correction keeps its real model diagnosis without inventing edit explanations', () => {
+  const raw = { diagnosisZh: '当前内容无需修改。', diagnosisEn: 'No necessary changes remain.', edits: [] };
+  const result = applyAnchoredCorrection(raw, paragraphs, 'ta_tr');
+  assert.equal(result.proposal.diagnosisZh, raw.diagnosisZh);
+  assert.equal(result.stage.diagnosisEn, raw.diagnosisEn);
+});
