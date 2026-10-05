@@ -107,12 +107,13 @@ export function CoachingWorkspace({ data, onUpdate }: { data: CoachingSubmission
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(action),
     });
     const payload = await response.json();
+    if (response.status >= 500) throw new Error(t('这一步暂时没能完成。已保存的稿件和进度仍保留，请重试；技术故障不计入重写失败次数。', 'This step could not finish. Your saved draft and progress are safe. Please retry; technical failures do not count as failed rewrites.'));
     if (!response.ok) throw new Error(payload.error || 'This step could not finish. Your saved draft is safe.');
     // Playback only receives the state read back from persistent storage.
     const saved = await readSubmission(data.id);
     onUpdate(saved);
     return saved;
-  }, [data.id, onUpdate]);
+  }, [data.id, onUpdate, t]);
 
   const perform = useCallback(async (action: CoachingAction['action']) => {
     if (busyRef.current) return;
