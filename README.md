@@ -1,6 +1,21 @@
-# Band Autopsy / 作文解剖室
+# 四大金刚 / Erators
 
-IELTS Writing assessment and correction tool. Students submit an essay, receive AI scoring on the four IELTS criteria (grounded in public IELTS Writing band descriptors), then watch four criterion-specific examiners revise the essay one edit at a time.
+雅思写作，一关一关变强。
+
+IELTS writing practice with four sequential examiner passes. Students receive original scores, rewrite serious problems themselves, and unlock a small correction only after passing the current examiner's published checks.
+
+## Coaching policy
+
+New submissions use `ta_tr → cc → lr → gra`. Each examiner has three fixed checks in `src/lib/coaching-rubric.ts`. All three must pass; a requested Band 7, 8 or 9 does not move the gate. These are teaching rules informed by the [official descriptors](https://ielts.org/cdn/ielts-guides/ielts-writing-band-descriptors.pdf), not official IELTS cutoffs.
+
+- Failed reviews return reasons, exact source highlights and rewrite tasks. They do not change the essay.
+- Students save a revision directly in the editor, then request another review. Original text/scores and revision history remain saved.
+- A later student rewrite rechecks earlier gates. If it undoes a previous pass, that examiner reopens; old reviews and correction snapshots stay archived.
+- Three unsuccessful reviews at one examiner end the exercise as **practice unfinished**, with the remaining action plan. No automatic pass or hidden bypass.
+- A passing review unlocks a correction limited to that criterion. Literal source patches are applied in code and audited for scope before saving. The saved before/after text drives playback.
+- Each next examiner requires an explicit advance. After grammar, the student's revised draft stays separate from an AI reference version targeting the selected band. The reference receives an independent estimate; it is never automatically awarded the requested score.
+
+Coaching progress is stored in the existing `submissions.correction.coaching` JSONB document, including immutable reviewed drafts and revision history. This release needs no schema migration or replacement of production rows. Old saved results and public demos retain their original replay format.
 
 ## Model / integration configuration
 
@@ -24,15 +39,16 @@ Required environment variables (provided by the platform):
 | --- | --- | --- |
 | POST | `/api/uploads` | Multipart upload (`file`, `role=essay\|task`); magic-byte validation, JPG/PNG, max 8MB, max 3 essay pages; returns `{uploadIds}` |
 | POST | `/api/extract` | `{uploadIds}` → real vision OCR, `{text}`; preserves errors, never corrects |
-| POST | `/api/submissions` | `{taskType, promptText, originalText, taskImageId?}` → `{id}`; code-assigned paragraph IDs; rate limit 20/hour/session |
+| POST | `/api/submissions` | `{taskType, promptText, originalText, taskImageId?, targetBand?}` → `{id}`; target 7/8/9, default 7; code-assigned paragraph IDs; rate limit 20/hour/session |
 | GET | `/api/submissions/:id` | Owner-scoped full submission (paragraphs, assessment, correction stages, status, timings) |
 | POST | `/api/submissions/:id/assess` | One real model assessment; Zod validation + one malformed-output retry; overall computed in code; cached on replay |
-| POST | `/api/submissions/:id/correct` | Legacy whole-essay correction (kept for compatibility) |
-| POST | `/api/submissions/:id/examiners/:criterion` | One criterion stage (`ta_tr`,`cc`,`lr`,`gra`); atomic claim with stale-lock expiry; one malformed-output retry; chained from previous saved stage |
+| POST | `/api/submissions/:id/coaching` | `{action,revision,text?}`; actions `review`, `rewrite`, `correct`, `advance`, `finalise`; owner, current revision, phase and gate checked server-side |
+| POST | `/api/submissions/:id/correct` | Legacy correction; rejects coaching submissions |
+| POST | `/api/submissions/:id/examiners/:criterion` | Legacy sequential stage; rejects coaching submissions |
 | GET | `/api/demos?slug=task1\|task2` | Public read-only approved demo payload; zero model calls |
 | GET | `/api/health` | Liveness + DB query; no secrets |
 
-## Four-examiner flow
+## Original scoring and legacy replay
 
 1. Assessment scores the **original essay only**. Four equally weighted integer criterion estimates; overall = average rounded to nearest 0.5 (half-up) in server code. Labelled an estimate, not an official IELTS score.
 2. Four stages run in fixed order `ta_tr → cc → lr → gra`. Each stage:
@@ -67,10 +83,11 @@ Schema is defined in Drizzle (`src/storage/database/shared/schema.ts`) and appli
 
 ## Tests
 
-- Engine tests (`node:test` + tsx): paragraph chaining, diff endpoint reconstruction, ordered phases, rejection of missing/duplicate/unknown paragraph IDs and wrong order, unchanged-paragraph handling.
+- Gate tests: evidence matching, numerical thresholds, three-failure cap, cached text, correction scope, ordered transitions and reopening earlier gates.
+- Playback tests: original and student-rewritten paragraph IDs, exact endpoint reconstruction, progressive insertions/deletions, zero-edit passes, invalid saved data.
 
 ```bash
-npx tsx --test src/components/theatre/theatre-engine.test.ts
+pnpm exec tsx --test src/lib/coaching-validation.test.ts src/components/coaching/single-stage-film.test.ts src/components/theatre/theatre-engine.test.ts
 ```
 
 ## Recorded processing times (this environment)

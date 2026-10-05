@@ -13,10 +13,10 @@ export type TheatreData = {
   correction: { stages: ExaminerStage[] };
 };
 const CAST: { key: Criterion; name: string; zh: string; job: string; enJob: string; color: string }[] = [
-  { key: 'ta_tr', name: 'The Strategist', zh: '审题考官', job: '任务回应', enJob: 'Task Response', color: '#087e82' },
-  { key: 'cc', name: 'The Architect', zh: '结构考官', job: '连贯与衔接', enJob: 'Coherence & Cohesion', color: '#4566bb' },
-  { key: 'lr', name: 'The Wordsmith', zh: '词汇考官', job: '词汇资源', enJob: 'Lexical Resource', color: '#a56a09' },
-  { key: 'gra', name: 'The Grammarian', zh: '语法考官', job: '语法多样性与准确性', enJob: 'Grammar Range & Accuracy', color: '#a84e76' },
+  { key: 'ta_tr', name: 'The Strategist', zh: '审题金刚', job: '任务回应', enJob: 'Task Response', color: '#087e82' },
+  { key: 'cc', name: 'The Architect', zh: '结构金刚', job: '连贯与衔接', enJob: 'Coherence & Cohesion', color: '#4566bb' },
+  { key: 'lr', name: 'The Wordsmith', zh: '词汇金刚', job: '词汇资源', enJob: 'Lexical Resource', color: '#a56a09' },
+  { key: 'gra', name: 'The Grammarian', zh: '语法金刚', job: '语法多样性与准确性', enJob: 'Grammatical Range & Accuracy', color: '#a84e76' },
 ];
 
 export function ExaminerTheatre({ data, demo = false, autoPlay = false }: { data: TheatreData; demo?: boolean; autoPlay?: boolean }) {
@@ -63,7 +63,7 @@ export function ExaminerTheatre({ data, demo = false, autoPlay = false }: { data
   }
   return <div className="ba-theatre" style={{ '--examiner': examiner?.color || '#087e82' } as React.CSSProperties} data-testid="theatre" data-phase={finished ? 'complete' : phase.name} data-examiner={examiner?.key} data-progress={Math.round(position)}>
     <style>{CSS}</style>
-    <header className="ba-header"><Link href="/" className="ba-brand"><small>WRITING LAB</small>Band Autopsy<span>作文解剖室</span></Link>
+    <header className="ba-header"><Link href="/" className="ba-brand"><small>ERATORS · IELTS WRITING</small>四大金刚<span>一关一关变强</span></Link>
       <button onClick={() => setLang(v => v === 'zh' ? 'en' : 'zh')} aria-label="Toggle language">{lang === 'zh' ? 'EN' : '中文'}</button>
     </header>
     <main className="ba-main">

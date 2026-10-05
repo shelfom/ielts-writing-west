@@ -1,3 +1,5 @@
+import type { CoachingCorrection } from './coaching-types';
+import type { ExaminerStage } from './examiner-validation';
 export type TaskType = 'academic1' | 'general1' | 'task2';
 
 export interface ContentPart {
@@ -59,11 +61,12 @@ export interface PlaybackEvent {
 export interface SubmissionData {
   id: string;
   task_type: TaskType;
+  task_image_url?: string | null;
   prompt_text: string;
   original_text: string;
   paragraphs: Paragraph[];
   assessment: Assessment | null;
-  correction: Correction | null;
+  correction: Correction | { stages: ExaminerStage[] } | CoachingCorrection | null;
   playback: { events: PlaybackEvent[] } | null;
   stage: string;
   status: string;

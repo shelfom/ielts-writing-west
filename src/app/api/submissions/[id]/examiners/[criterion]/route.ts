@@ -49,6 +49,8 @@ export async function POST(
       return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
     }
 
+    if (submission.correction?.coaching) return NextResponse.json({ error: 'This essay requires the coaching review gates; use the coaching endpoint' }, { status: 409 });
+
     if (!submission.assessment) {
       return NextResponse.json(
         { error: 'Assessment required before examiner stages' },

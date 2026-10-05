@@ -1,4 +1,10 @@
-# AGENTS.md - Band Autopsy / 作文解剖室
+# AGENTS.md - 四大金刚 / Erators
+
+## Current coaching flow (2026-10-05)
+
+New submissions use persisted `correction.coaching` state and POST `/api/submissions/:id/coaching` actions (`review`, `rewrite`, `correct`, `advance`, `finalise`). Preserve original text and five scores. Each criterion has three published readiness checks; failed reviews change no text. After three distinct failed reviews, practice pauses without auto-passing. Later student rewrites recheck earlier gates to prevent stale passes. Real model corrections use exact anchored patches and a separate scope audit. Target-band models are separate from student drafts and independently estimated. Legacy saved theatre and demo routes remain compatible; legacy mutation routes reject coaching rows.
+
+`src/lib/coaching-types.ts`, `coaching-rubric.ts`, `coaching-validation.ts`, and `coaching-prompts.ts` define the shared contract. UI lives in `src/components/coaching`. All progress/history uses existing JSONB, with no schema migration. Never replace production tables to deploy this change.
 
 ## Project Overview
 IELTS Writing assessment and correction tool. Users submit essays, receive AI-powered scoring (4 IELTS criteria), and see sentence-by-sentence corrections with animated playback.

@@ -77,29 +77,24 @@ ${chartSourceData ? `## Authoritative Chart Source Data\n${chartSourceData}\nThe
 
 ## Assessment Criteria (based on public IELTS Writing Band Descriptors)
 
+Source: https://ielts.org/cdn/ielts-guides/ielts-writing-band-descriptors.pdf (May 2023).
+Choose the best supported descriptor, never a requested target score. These anchors are summaries, not a mechanical checklist.
+
 ### ${criterionName} (TA/TR)
-- Band 9: Fully addresses all requirements; clear overview/position; well-developed responses
-- Band 7: Addresses all requirements; clear position; logical progression
-- Band 5: Partially addresses; limited development; may miss key features
-- Band 3: Does not adequately address the task; minimal response
+${taskType === 'task2'
+    ? '- 6: Relevant answer, uneven support. 7: Developed position and supported ideas. 8: Thorough coverage and development. 9: Sustained depth, almost no gaps.'
+    : '- 6: Relevant coverage with some gaps. 7: Clear overview/key features (Academic), or clear purpose/all bullets/appropriate tone (General). 8: Effective selection and extension. 9: Fully fulfilled requirements.'}
 
 ### Coherence and Cohesion (CC)
-- Band 9: Skillful paragraphing; seamless cohesion; logical progression
-- Band 7: Logical organization; clear progression; adequate cohesion
-- Band 5: Some organization but lacks overall progression; inadequate cohesion
-- Band 3: No clear progression; poorly organized
+- 6: Overall progression, sometimes mechanical links. 7: Logical organisation with minor lapses. 8: Easily followed, effective cohesion. 9: Effortless reading and unobtrusive connections.
 
 ### Lexical Resource (LR)
-- Band 9: Wide range; precise meanings; natural collocations; rare minor errors
-- Band 7: Sufficient range; some awareness of style/collocation; occasional errors
-- Band 5: Limited range; noticeable errors; but meaning generally clear
-- Band 3: Very limited range; frequent errors impeding meaning
+- 6: Adequate but imprecise. 7: Some flexibility and precision. 8: Broad, effective vocabulary with occasional slips. 9: Natural, precise control with extremely rare errors.
 
 ### Grammatical Range and Accuracy (GRA)
-- Band 9: Wide range; full flexibility; rare minor errors
-- Band 7: Variety of complex structures; frequent error-free sentences
-- Band 5: Limited range; attempts complex sentences but with errors
-- Band 3: Very limited range; subordinate structures rare; errors predominate
+- 6: Simple/complex mix, errors seldom obscure meaning. 7: Varied complex forms, frequent accurate sentences. 8: Most sentences accurate, errors occasional. 9: Flexible structural control, extremely rare errors.
+
+Scores below 6 remain valid. Missing task coverage, weak progression, restricted vocabulary or frequent communication problems support lower bands. Never inflate scores to reward effort or prior AI editing.
 
 ${taskGuidance}
 
@@ -313,4 +308,3 @@ ${includeChartImage ? '## Chart Image\nA chart image was provided. Verify data a
 
 Respond ONLY with the JSON object.`;
 }
-

@@ -6,30 +6,18 @@ import Link from 'next/link';
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
 import { LangToggle } from '@/components/LangToggle';
 
-const EXAMPLE_ESSAY = `The graph below shows the percentage of water used for different purposes in six areas of the world.
-
-Overall, it is clear that agriculture uses the most water in most regions, particularly in South America, Africa, and Southeast Asia. Industrial water use is highest in Europe and North America.
-
-In South America, agriculture accounts for approximately 71% of water consumption, while industry uses 19% and domestic use is 10%. Similarly, in Africa, farming takes up 84% of water, with industrial and domestic usage at 7% and 9% respectively. Southeast Asia shows a comparable pattern, with agriculture at 88%, industry at 5%, and domestic at 7%.
-
-In contrast, Europe uses 53% of its water for industry, 33% for agriculture, and 14% for domestic purposes. North America follows a similar trend, with industrial use at 48%, agricultural at 39%, and domestic at 13%. Central Asia primarily uses water for agriculture at 88%, while industry and domestic use account for 5% and 7%.
-
-In conclusion, developing regions tend to use most water for farming, whereas developed areas have higher industrial water consumption.`;
-
-const EXAMPLE_PROMPT = `The charts below show the percentage of water used for different purposes in six areas of the world.
-
-Summarise the information by selecting and reporting the main features, and make comparisons where relevant.`;
-
 function InputFormInner() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const router = useRouter();
   const [taskType, setTaskType] = useState<'academic1' | 'general1' | 'task2'>('task2');
+  const [targetBand, setTargetBand] = useState<7 | 8 | 9>(7);
   const [promptText, setPromptText] = useState('');
   const [essayText, setEssayText] = useState('');
   const [taskImage, setTaskImage] = useState<File | null>(null);
   const [essayImages, setEssayImages] = useState<File[]>([]);
   const [taskImagePreview, setTaskImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingSample, setLoadingSample] = useState<'task1' | 'task2' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ocrText, setOcrText] = useState<string | null>(null);
   const [isOcrProcessing, setIsOcrProcessing] = useState(false);
@@ -115,10 +103,27 @@ function InputFormInner() {
     }
   }, [ocrText]);
 
-  const loadExample = useCallback(() => {
-    setPromptText(EXAMPLE_PROMPT);
-    setEssayText(EXAMPLE_ESSAY);
-    setTaskType('academic1');
+  const loadSample = useCallback(async (slug: 'task1' | 'task2') => {
+    setLoadingSample(slug); setError(null);
+    try {
+      const response = await fetch(`/api/demos?slug=${slug}`, { cache: 'no-store' });
+      const sample = await response.json();
+      if (!response.ok) throw new Error(sample.error || 'Could not load the practice essay.');
+      let chart: File | null = null;
+      if (slug === 'task1') {
+        const chartResponse = await fetch('/demo-chart.png');
+        if (!chartResponse.ok) throw new Error('Could not load the sample chart.');
+        chart = new File([await chartResponse.blob()], 'practice-chart.png', { type: 'image/png' });
+      }
+      setTaskType(sample.task_type);
+      setPromptText(sample.prompt_text);
+      setEssayText(sample.paragraphs.map((p: { text: string }) => p.text).join('\n\n'));
+      setTaskImage(chart);
+      setTaskImagePreview(chart ? '/demo-chart.png' : null);
+      setEssayImages([]); setOcrText(null); setOcrConfirmed(false);
+      document.getElementById('essay-entry')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not load the sample.'); }
+    finally { setLoadingSample(null); }
   }, []);
 
   const handleSubmit = useCallback(async () => {
@@ -162,6 +167,7 @@ function InputFormInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           taskType,
+          targetBand,
           promptText: promptText.trim(),
           originalText: essayText.trim(),
           taskImageId,
@@ -180,7 +186,7 @@ function InputFormInner() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [taskType, promptText, essayText, taskImage, essayImages, ocrConfirmed, router, t]);
+  }, [taskType, targetBand, promptText, essayText, taskImage, essayImages, ocrConfirmed, router, t]);
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -188,8 +194,8 @@ function InputFormInner() {
       <header className="border-b border-[#E5E0D5] px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div>
-            <span className="text-xs tracking-widest uppercase text-[#9CA3AF] zh-font">WRITING LAB</span>
-            <h1 className="text-lg font-light tracking-wide text-[#172020]">Band Autopsy</h1>
+            <span className="text-xs tracking-widest uppercase text-[#9CA3AF] zh-font">ERATORS · WRITING LAB</span>
+            <h1 className="text-[27px] font-bold tracking-wide text-[#172020]">{t('四大金刚', 'Erators')}</h1>
           </div>
           <LangToggle />
         </div>
@@ -197,37 +203,47 @@ function InputFormInner() {
 
       {/* Main */}
       <main className="max-w-4xl mx-auto px-6 py-12">
-        {/* Demo Cards */}
-        <div className="mb-12">
-          <h2 className="text-sm tracking-widest uppercase text-[#9CA3AF] zh-font mb-4">
-            {t('示例回放', 'Demo Replays')}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link href="/demo/task1" className="block p-6 border border-[#E5E0D5] rounded hover:border-[#F15B3D] transition-colors bg-white">
-              <div className="text-xs tracking-widest uppercase text-[#9CA3AF] mb-2">Academic Task 1</div>
-              <h3 className="text-lg font-medium text-[#172020] zh-font mb-2">{t('图表作文', 'Chart Essay')}</h3>
-              <p className="text-sm text-[#9CA3AF] zh-font">{t('观看四位考官演示', 'Watch four examiners')}</p>
-            </Link>
-            <Link href="/demo/task2" className="block p-6 border border-[#E5E0D5] rounded hover:border-[#F15B3D] transition-colors bg-white">
-              <div className="text-xs tracking-widest uppercase text-[#9CA3AF] mb-2">Task 2</div>
-              <h3 className="text-lg font-medium text-[#172020] zh-font mb-2">{t('议论文', 'Argumentative Essay')}</h3>
-              <p className="text-sm text-[#9CA3AF] zh-font">{t('观看四位考官演示', 'Watch four examiners')}</p>
-            </Link>
-          </div>
-        </div>
-
         {/* Hero */}
         <div className="mb-12">
           <h2 className="text-3xl md:text-4xl font-light text-[#172020] zh-font leading-tight mb-3">
-            {t('看见你的作文，一句句变好', 'See your essay improve, sentence by sentence')}
+            {t('雅思写作，一关一关变强。', 'IELTS writing. Stronger with every round.')}
           </h2>
           <p className="text-[#9CA3AF] text-sm zh-font">
-            {t('IELTS 写作批改与诊断', 'IELTS Writing assessment & diagnosis')}
+            {t('四位 AI 考官，一次只练一项。先指出关键问题，由你重写；过关后，看考官逐句精修。', 'Four AI examiners. One criterion at a time. You fix the major problems; then watch focused corrections happen.')}
           </p>
+          <p className="mt-3 text-sm leading-7 text-[#59635c] zh-font">
+            {t('读懂评分规则，把每一稿写得更有把握。', 'Learn the scoring rules and make each draft more deliberate.')}
+          </p>
+          <div className="grid grid-cols-4 gap-2 mt-7" aria-label={t('四项写作训练', 'Four writing disciplines')}>
+            {[
+              { number: '01', zh: '审题', en: 'Task', color: '#087e82' },
+              { number: '02', zh: '结构', en: 'Structure', color: '#4566bb' },
+              { number: '03', zh: '词汇', en: 'Vocabulary', color: '#a56a09' },
+              { number: '04', zh: '语法', en: 'Grammar', color: '#a84e76' },
+            ].map(pass => <div key={pass.number} className="border-t-2 pt-3 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3" style={{ borderColor: pass.color, color: pass.color }}>
+              <span className="text-2xl essay-font">{pass.number}</span><span className="text-xs sm:text-sm font-medium zh-font">{t(pass.zh, pass.en)}</span>
+            </div>)}
+          </div>
+        </div>
+
+        {/* Demo Cards */}
+        <div className="mb-12">
+          <h2 className="text-sm tracking-widest uppercase text-[#9CA3AF] zh-font mb-4">
+            {t('先试一篇，看看考官怎么把关', 'Try an essay. Meet the examiners.')}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(['task1', 'task2'] as const).map(slug => <div key={slug} className="p-6 border border-[#E5E0D5] rounded bg-white">
+              <div className="text-xs tracking-widest uppercase text-[#647268] mb-2">{slug === 'task1' ? 'Academic Task 1' : 'Task 2'}</div>
+              <h3 className="text-lg font-medium text-[#172020] zh-font mb-2">{slug === 'task1' ? t('图表作文：抓住关键事实', 'Chart essay: get the facts right') : t('议论文：把立场讲清楚', 'Argument essay: make your position clear')}</h3>
+              <p className="text-xs leading-6 text-[#647268] zh-font mb-4">{t('载入一篇有待改进的练习稿，亲自体验重写与过关。', 'Load an imperfect practice draft and try the rewrite gates yourself.')}</p>
+              <button data-testid={`load-sample-${slug}`} onClick={() => void loadSample(slug)} disabled={!!loadingSample || isSubmitting} className="px-4 py-2 bg-[#172020] text-white text-xs rounded disabled:opacity-50">{loadingSample === slug ? t('载入中…', 'Loading…') : t('载入练习稿', 'Load practice draft')} →</button>
+              <Link href={`/demo/${slug}`} className="block text-xs text-[#647268] underline underline-offset-4 mt-4">{t('查看已完成的修改回放', 'Watch a completed correction example')}</Link>
+            </div>)}
+          </div>
         </div>
 
         {/* Task Type Selector */}
-        <div className="mb-8">
+        <div id="essay-entry" className="mb-8 scroll-mt-6">
           <label className="block text-sm text-[#9CA3AF] mb-3 zh-font">
             {t('任务类型', 'Task Type')}
           </label>
@@ -253,12 +269,22 @@ function InputFormInner() {
           </div>
         </div>
 
+        <fieldset className="mb-8">
+          <legend className="text-sm text-[#59635c] mb-3 zh-font">{t('目标分数', 'Target band')}</legend>
+          <div className="flex gap-3">
+            {([7, 8, 9] as const).map(band => <button key={band} type="button" data-testid={`target-band-${band}`} aria-pressed={targetBand === band} onClick={() => setTargetBand(band)} className={`px-6 py-3 border rounded text-lg essay-font ${targetBand === band ? 'border-[#172020] bg-[#172020] text-white' : 'border-[#E5E0D5] bg-white text-[#172020]'}`}>{band}</button>)}
+          </div>
+          <p className="mt-3 text-xs leading-6 text-[#59635c] zh-font">{t('四关完成后，另附以你完善后的观点为基础的目标分范文及独立估分。目标不等于保证。', 'After all four passes, get a separate target-band model based on your developed ideas, with an independent estimate. A target is not a guarantee.')}</p>
+        </fieldset>
+
         {/* Question/Prompt Text */}
         <div className="mb-8">
           <label className="block text-sm text-[#9CA3AF] mb-2 zh-font">
             {t('题目要求', 'Question Text')} <span className="text-vermilion">*</span>
           </label>
           <textarea
+            data-testid="question-input"
+            aria-label={t('题目要求', 'Question text')}
             value={promptText}
             onChange={e => setPromptText(e.target.value)}
             placeholder={t('粘贴或输入题目要求...', 'Paste or type the question prompt...')}
@@ -310,6 +336,8 @@ function InputFormInner() {
             {t('作文内容', 'Essay Text')} <span className="text-vermilion">*</span>
           </label>
           <textarea
+            data-testid="essay-input"
+            aria-label={t('作文内容', 'Essay text')}
             value={essayText}
             onChange={e => setEssayText(e.target.value)}
             placeholder={t('粘贴作文内容，或上传 txt/图片...', 'Paste essay text, or upload txt/images...')}
@@ -414,26 +442,22 @@ function InputFormInner() {
         {/* Actions */}
         <div className="flex items-center gap-4">
           <button
+            data-testid="submit-essay"
             onClick={handleSubmit}
             disabled={isSubmitting}
             className="px-8 py-3 bg-[#F15B3D] text-white rounded text-sm font-medium hover:bg-[#d94a2e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed zh-font"
           >
             {isSubmitting
               ? t('处理中...', 'Processing...')
-              : t('开始解剖', 'Analyse my essay')
+              : t('开始四关训练', 'Start the four examiner passes')
             }
           </button>
-          <button
-            onClick={loadExample}
-            className="px-4 py-3 border border-[#E5E0D5] rounded text-sm text-[#9CA3AF] hover:text-[#172020] hover:border-[#9CA3AF] transition-colors zh-font"
-          >
-            {t('加载示例', 'Load example')}
-          </button>
+
         </div>
 
         {/* Note about example */}
         <p className="mt-3 text-xs text-[#9CA3AF] zh-font">
-          {t('* 示例仅为填充内容，分析时同样使用真实模型', '* Example is synthetic practice; analysis uses real model like any user essay')}
+          {t('练习稿为虚构案例。每次新练习都由真实 AI 审阅；不是官方 IELTS 考官评分。', 'Practice drafts are synthetic examples. Each new practice uses real AI review, not official IELTS examiners.')}
         </p>
       </main>
     </div>

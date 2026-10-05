@@ -6,182 +6,74 @@ import { buildAssessmentPrompt, getCriterionLabels } from '@/lib/prompts';
 import { computeOverall } from '@/lib/scoring';
 import { getStorage } from '@/lib/storage';
 import { z } from 'zod';
+import { parseJSON } from '@/lib/coaching-validation';
 import type { Assessment, TaskType, ContentPart } from '@/lib/types';
 
 const assessmentSchema = z.object({
-  ta_tr: z.number().int().min(0).max(9),
-  cc: z.number().int().min(0).max(9),
-  lr: z.number().int().min(0).max(9),
-  gra: z.number().int().min(0).max(9),
-  diagnosisZh: z.string().min(10),
-  diagnosisEn: z.string().min(10),
+  ta_tr: z.number().int().min(0).max(9), cc: z.number().int().min(0).max(9),
+  lr: z.number().int().min(0).max(9), gra: z.number().int().min(0).max(9),
+  diagnosisZh: z.string().min(10), diagnosisEn: z.string().min(10),
 });
-
-function parseAssessmentJSON(text: string): z.infer<typeof assessmentSchema> {
-  // Try to extract JSON from markdown code block
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const jsonStr = jsonMatch ? jsonMatch[1].trim() : text.trim();
-  const parsed = JSON.parse(jsonStr);
-  return assessmentSchema.parse(parsed);
-}
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const ownerHash = await getOwnerHash();
+  const { id } = await params;
+  const db = getSupabaseClient();
+  let claimTs: string | undefined;
   try {
-    const ownerHash = await getOwnerHash();
-    const { id } = await params;
-
-    const client = getSupabaseClient();
-
-    // Fetch submission
-    const { data: submission, error: fetchError } = await client
-      .from('submissions')
-      .select('id, task_type, prompt_text, original_text, task_image_id, assessment, status, stage')
-      .eq('id', id)
-      .eq('owner_hash', ownerHash)
-      .maybeSingle();
-
-    if (fetchError) throw new Error(fetchError.message);
-    if (!submission) {
-      return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
+    const { data: submission, error } = await db.from('submissions')
+      .select('id, task_type, prompt_text, original_text, task_image_id, assessment, status, stage, updated_at')
+      .eq('id', id).eq('owner_hash', ownerHash).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!submission) return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
+    // Immutable original scores remain cached through every later coaching stage.
+    if (submission.assessment) return NextResponse.json(submission.assessment as Assessment);
+    if (submission.status === 'processing' && Date.now() - new Date(submission.updated_at).getTime() < 10 * 60_000) return NextResponse.json({ error: 'Assessment already in progress' }, { status: 409 });
+    claimTs = new Date(Math.max(Date.now(), new Date(submission.updated_at).getTime() + 1)).toISOString();
+    const { data: claimed, error: claimError } = await db.from('submissions')
+      .update({ status: 'processing', stage: 'assessing', error_message: null, updated_at: claimTs })
+      .eq('id', id).eq('owner_hash', ownerHash).eq('status', submission.status).eq('updated_at', submission.updated_at).select('id').maybeSingle();
+    if (claimError) throw new Error(claimError.message);
+    if (!claimed) { claimTs = undefined; return NextResponse.json({ error: 'Assessment already in progress' }, { status: 409 }); }
+    const startTime = Date.now();
+    const llm = createLLMClient(extractHeaders(request.headers));
+    const taskType = submission.task_type as TaskType;
+    const parts: ContentPart[] = [{ type: 'text', text: buildAssessmentPrompt(taskType, submission.prompt_text, submission.original_text, !!submission.task_image_id) }];
+    if (taskType === 'academic1' && !submission.task_image_id) throw new Error('Task image is required for Academic Task 1');
+    if (submission.task_image_id) {
+      const { data: upload, error: imageError } = await db.from('uploads').select('storage_key').eq('id', submission.task_image_id).eq('owner_hash', ownerHash).eq('role', 'task').maybeSingle();
+      if (imageError || !upload?.storage_key) throw new Error('Unable to load your task image; please retry');
+      const url = await getStorage().generatePresignedUrl({ key: upload.storage_key, expireTime: 3600 });
+      parts.push({ type: 'image_url', image_url: { url, detail: 'high' } });
     }
-
-    // If already assessed successfully, return cached
-    if (submission.assessment && submission.stage === 'assessed' || submission.stage === 'corrected') {
-      return NextResponse.json(submission.assessment as Assessment);
-    }
-
-    // Concurrency guard: if already processing and recent (< 2 min), reject
-    if (submission.status === 'processing') {
-      const { data: recent } = await client
-        .from('submissions')
-        .select('updated_at')
-        .eq('id', id)
-        .maybeSingle();
-      if (recent) {
-        const updatedAt = new Date(recent.updated_at).getTime();
-        if (Date.now() - updatedAt < 120000) {
-          return NextResponse.json({ error: 'Assessment already in progress' }, { status: 409 });
-        }
+    let raw: z.infer<typeof assessmentSchema> | undefined;
+    let feedback = '';
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await llm.invoke([{ role: 'user', content: parts.map(p => p.type === 'text' ? { ...p, text: p.text + feedback } : p) as unknown as string }], { model: MODEL_ID, temperature: 0.1, thinking: 'disabled', caching: 'disabled' });
+        raw = assessmentSchema.parse(parseJSON(response.content)); break;
+      } catch (error) {
+        if (attempt === 1) throw error;
+        feedback = '\nReturn ONLY the exact requested JSON, with four integer scores 0–9 and both diagnoses. Previous output could not be validated.';
       }
     }
-
-    // Mark as processing
-    await client
-      .from('submissions')
-      .update({ status: 'processing', stage: 'assessing', error_message: null })
-      .eq('id', id);
-
-    const startTime = Date.now();
-    const forwardHeaders = extractHeaders(request.headers);
-    const llmClient = createLLMClient(forwardHeaders);
-
-    const taskType = submission.task_type as TaskType;
-    const hasTaskImage = !!submission.task_image_id;
-
-    const prompt = buildAssessmentPrompt(
-      taskType,
-      submission.prompt_text,
-      submission.original_text,
-      hasTaskImage
-    );
-
-    // A chart task must never silently fall back to text-only assessment.
-    const contentParts: ContentPart[] = [{ type: 'text', text: prompt }];
-    if (taskType === 'academic1' && !submission.task_image_id) {
-      throw new Error('Task image is required for Academic Task 1');
-    }
-    if (submission.task_image_id) {
-      const { data: uploadData, error: imageError } = await client
-        .from('uploads').select('storage_key')
-        .eq('id', submission.task_image_id).eq('owner_hash', ownerHash).maybeSingle();
-      if (imageError || !uploadData?.storage_key) throw new Error('Unable to load your task image; please retry');
-      const presignedUrl = await getStorage().generatePresignedUrl({key: uploadData.storage_key, expireTime: 3600});
-      contentParts.push({type: 'image_url', image_url: {url: presignedUrl, detail: 'high'}});
-    }
-
-    // First attempt
-    let assessmentData: z.infer<typeof assessmentSchema>;
-    let retryUsed = false;
-
-    try {
-      const response = await llmClient.invoke(
-        [{ role: 'user', content: contentParts as unknown as string }],
-        { model: MODEL_ID, temperature: 0.2 }
-      );
-      assessmentData = parseAssessmentJSON(response.content);
-    } catch {
-      // Retry once with malformed output
-      retryUsed = true;
-      const retryResponse = await llmClient.invoke(
-        [
-          { role: 'user', content: contentParts as unknown as string },
-          { role: 'assistant', content: 'I need to provide the assessment in the exact JSON format requested.' },
-          { role: 'user', content: 'Please output ONLY the JSON assessment result.' },
-        ],
-        { model: MODEL_ID, temperature: 0.1 }
-      );
-      assessmentData = parseAssessmentJSON(retryResponse.content);
-    }
-
-    const durationMs = Date.now() - startTime;
-
-    // Compute overall score in code (not LLM)
-    const scores = [assessmentData.ta_tr, assessmentData.cc, assessmentData.lr, assessmentData.gra];
-    const overall = computeOverall(scores);
-
+    if (!raw) throw new Error('Assessment could not be validated');
     const labels = getCriterionLabels(taskType);
-
-    const assessment: Assessment = {
-      scores: {
-        ta_tr: { score: assessmentData.ta_tr, labelZh: labels.ta_tr.labelZh, labelEn: labels.ta_tr.labelEn },
-        cc: { score: assessmentData.cc, labelZh: labels.cc.labelZh, labelEn: labels.cc.labelEn },
-        lr: { score: assessmentData.lr, labelZh: labels.lr.labelZh, labelEn: labels.lr.labelEn },
-        gra: { score: assessmentData.gra, labelZh: labels.gra.labelZh, labelEn: labels.gra.labelEn },
-      },
-      overall,
-      diagnosisZh: assessmentData.diagnosisZh,
-      diagnosisEn: assessmentData.diagnosisEn,
-      provider_model: MODEL_ID,
-      duration_ms: durationMs,
-    };
-
-    // Save to DB
-    await client
-      .from('submissions')
-      .update({
-        assessment,
-        stage: 'assessed',
-        status: 'completed',
-        provider_model: MODEL_ID,
-        assess_duration_ms: durationMs,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id);
-
+    const durationMs = Date.now() - startTime;
+    const assessment: Assessment = { scores: {
+      ta_tr: { score: raw.ta_tr, labelZh: labels.ta_tr.labelZh, labelEn: labels.ta_tr.labelEn },
+      cc: { score: raw.cc, labelZh: labels.cc.labelZh, labelEn: labels.cc.labelEn },
+      lr: { score: raw.lr, labelZh: labels.lr.labelZh, labelEn: labels.lr.labelEn },
+      gra: { score: raw.gra, labelZh: labels.gra.labelZh, labelEn: labels.gra.labelEn },
+    }, overall: computeOverall([raw.ta_tr, raw.cc, raw.lr, raw.gra]), diagnosisZh: raw.diagnosisZh, diagnosisEn: raw.diagnosisEn, provider_model: MODEL_ID, duration_ms: durationMs };
+    const { data: saved, error: saveError } = await db.from('submissions').update({ assessment, stage: 'assessed', status: 'completed', provider_model: MODEL_ID, assess_duration_ms: durationMs, updated_at: new Date(Math.max(Date.now(), new Date(claimTs!).getTime() + 1)).toISOString() })
+      .eq('id', id).eq('owner_hash', ownerHash).eq('status', 'processing').eq('updated_at', claimTs).select('id').maybeSingle();
+    if (saveError) throw new Error(saveError.message);
+    if (!saved) return NextResponse.json({ error: 'A newer request owns this essay. Refresh its saved state.' }, { status: 409 });
+    claimTs = undefined;
     return NextResponse.json(assessment);
-  } catch (err) {
-    const { id } = await params;
-    const message = err instanceof Error ? err.message : 'Assessment failed';
-
-    // Save error state
-    try {
-      const client = getSupabaseClient();
-      await client
-        .from('submissions')
-        .update({
-          stage: 'error',
-          status: 'error',
-          error_message: message,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id);
-    } catch {
-      // ignore secondary error
-    }
-
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Assessment failed';
+    if (claimTs) await db.from('submissions').update({ stage: 'error', status: 'error', error_message: message, updated_at: new Date(Math.max(Date.now(), new Date(claimTs!).getTime() + 1)).toISOString() }).eq('id', id).eq('owner_hash', ownerHash).eq('status', 'processing').eq('updated_at', claimTs);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,31 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerHash } from '@/lib/session';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { randomUUID } from 'crypto';
-import type { TaskType, Paragraph } from '@/lib/types';
+import { initialCoaching, assignParagraphs, validateDraft } from '@/lib/coaching-validation';
+import type { TaskType } from '@/lib/types';
 
 const VALID_TASK_TYPES: TaskType[] = ['academic1', 'general1', 'task2'];
 const MAX_PROMPT_LENGTH = 6000;
-const MAX_ESSAY_WORDS = 1500;
 const MAX_SUBMISSIONS_PER_HOUR = 20;
-
-function splitParagraphs(text: string): Paragraph[] {
-  return text
-    .split(/\n\s*\n/)
-    .map(p => p.trim())
-    .filter(p => p.length > 0)
-    .map(p => ({ id: randomUUID(), text: p }));
-}
-
-function countWords(text: string): number {
-  return text.split(/\s+/).filter(w => w.length > 0).length;
-}
 
 export async function POST(request: NextRequest) {
   try {
     const ownerHash = await getOwnerHash();
     const body = await request.json();
-    const { taskType, promptText, originalText, taskImageId } = body;
+    const { taskType, promptText, originalText, taskImageId, targetBand = 7 } = body;
+    if (![7, 8, 9].includes(targetBand)) return NextResponse.json({ error: 'Target band must be 7, 8 or 9' }, { status: 400 });
+    if (taskImageId !== undefined && taskImageId !== null && (typeof taskImageId !== 'string' || !/^[a-f0-9-]{36}$/i.test(taskImageId))) return NextResponse.json({ error: 'Invalid task image ID' }, { status: 400 });
 
     // Validate task type
     if (!VALID_TASK_TYPES.includes(taskType)) {
@@ -45,13 +34,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Essay text is required' }, { status: 400 });
     }
 
-    const wordCount = countWords(originalText);
-    if (wordCount > MAX_ESSAY_WORDS) {
-      return NextResponse.json({ error: `Essay too long (${wordCount} words, max ${MAX_ESSAY_WORDS})` }, { status: 400 });
-    }
+    let cleanText: string;
+    try { cleanText = validateDraft(originalText); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid essay' }, { status: 400 }); }
 
     // Rate limiting check
     const client = getSupabaseClient();
+    if (taskType === 'academic1' && !taskImageId) return NextResponse.json({ error: 'Original task image is required for Academic Task 1' }, { status: 400 });
+    if (taskImageId) {
+      const { data: image, error: imageError } = await client.from('uploads').select('id').eq('id', taskImageId).eq('owner_hash', ownerHash).eq('role', 'task').maybeSingle();
+      if (imageError) throw new Error(imageError.message);
+      if (!image) return NextResponse.json({ error: 'Task image not found in your session' }, { status: 400 });
+    }
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { count, error: countError } = await client
       .from('submissions')
@@ -65,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Split into paragraphs
-    const paragraphs = splitParagraphs(originalText);
+    const paragraphs = assignParagraphs(cleanText);
 
     // Insert submission
     const { data, error } = await client
@@ -74,9 +67,10 @@ export async function POST(request: NextRequest) {
         owner_hash: ownerHash,
         task_type: taskType,
         prompt_text: promptText.trim(),
-        original_text: originalText.trim(),
+        original_text: cleanText,
         task_image_id: taskImageId || null,
         paragraphs: paragraphs,
+        correction: { stages: [], coaching: initialCoaching(cleanText, paragraphs, targetBand) },
         stage: 'created',
         status: 'pending',
       })
