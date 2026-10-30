@@ -45,19 +45,21 @@ Coaching progress is stored in the existing `submissions.correction.coaching` JS
 
 ## Model / integration configuration
 
-- **Model**: `doubao-seed-2-0-pro-260215` (Doubao Seed 2 Pro, multimodal) via `coze-coding-dev-sdk`
+- **Model**: `doubao-seed-2-0-pro-260215` (Doubao Seed 2 Pro, multimodal) on Volcengine Ark, called directly through its OpenAI-compatible chat API
   - Vision OCR, chart-informed assessment, and four examiner stages all call this model
-  - `thinking: 'disabled'` and `caching: 'disabled'` on bounded calls
-- **Database**: managed PostgreSQL (Supabase), accessed with the service-role key server-side. RLS enabled.
-- **Storage**: managed S3-compatible private object storage for uploads; presigned URLs generated server-side
+  - Thinking is disabled on bounded calls
+- **Database**: one SQLite file (`writing-west.db`) in `DATA_DIR`, using Node's built-in `node:sqlite`. Demo essays ship in `data/demos.json` and are loaded on start.
+- **Storage**: uploaded images are private files in `DATA_DIR/files`; they reach the model and the browser as `data:` URLs, so nothing is publicly hosted.
 - All credentials are read from environment variables; none are committed to the repository.
 
-Required environment variables (provided by the platform):
+Environment variables:
 
-- `COZE_SUPABASE_URL`, `COZE_SUPABASE_ANON_KEY`, `COZE_SUPABASE_SERVICE_ROLE_KEY`
-- `COZE_BUCKET_ENDPOINT_URL`, `COZE_BUCKET_NAME`
-- `DEPLOY_RUN_PORT`
-- `COZE_PROJECT_DOMAIN_DEFAULT`
+- `ARK_API_KEY` (required): Volcengine Ark API key
+- `DATA_DIR` (production): a persistent volume for the database and uploads; defaults to `./.data`
+- `PORT`: defaults to 5000
+- `ARK_MODEL`, `ARK_BASE_URL` (optional): override the model or endpoint
+
+Requires Node 24. `pnpm install && pnpm build && pnpm start`.
 
 ## Endpoints
 
