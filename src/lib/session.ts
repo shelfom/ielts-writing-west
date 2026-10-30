@@ -14,7 +14,7 @@ export async function getOwnerHash(): Promise<string> {
     cookieStore.set(COOKIE_NAME, ownerId, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.COZE_PROJECT_ENV === 'PROD',
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 30, // 30 days
       path: '/',
     });

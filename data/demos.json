@@ -1,0 +1,561 @@
+[
+ {
+  "slug": "task1",
+  "task_type": "academic1",
+  "prompt_text": "The bar chart shows the percentage of commuters using public transport in three cities in 2010 and 2020. Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+  "paragraphs": [
+   {
+    "id": "p1",
+    "text": "The bar chart compare the percentage of commuters who used public transport in three cities in 2010 and 2020. The cities shown are Alder, Brook and Cedar, and the figures are measured in percent."
+   },
+   {
+    "id": "p2",
+    "text": "Overall, the percentage increased in all three city during the period. Alder had the highest proportion in both years, whereas Cedar remained the lowest. Cedar experienced the biggest rise, and it overtook Brook in 2020."
+   },
+   {
+    "id": "p3",
+    "text": "On the other hand, in 2010, 40 percent of commuters in Alder used public transport, compared with 25 percent in Brook and just 15 percent in Cedar. By 2020, the figure for Alder rose at 55 commuters. This represented an increase of 15 percentage points over ten years."
+   },
+   {
+    "id": "p4",
+    "text": "Brook saw a more larger increase, from 25 to 45 percent, a growth of 20 percent. Cedar also enlarged, but at a slower rate, reaching 25 percent in 2020. The gap between Alder and Cedar was 25 percentage points in 2010 and became 30 in 2020. Therefore, although all cities improved their public transport usage, the difference between the highest and lowest city was slightly wider."
+   }
+  ],
+  "task_image_url": "/demo-chart.png",
+  "assessment": {
+   "scores": {
+    "cc": {
+     "score": 5,
+     "labelEn": "Coherence and Cohesion",
+     "labelZh": "连贯与衔接"
+    },
+    "lr": {
+     "score": 5,
+     "labelEn": "Lexical Resource",
+     "labelZh": "词汇资源"
+    },
+    "gra": {
+     "score": 5,
+     "labelEn": "Grammatical Range and Accuracy",
+     "labelZh": "语法多样性与准确性"
+    },
+    "ta_tr": {
+     "score": 5,
+     "labelEn": "Task Achievement",
+     "labelZh": "任务完成度"
+    }
+   },
+   "overall": 5,
+   "diagnosisEn": "The strength of this essay is that it covers the core trend that the percentage of commuters using public transport increased in all three cities, and attempts to provide specific data as support. However, it has many flaws: in terms of task achievement, there are factual data errors, such as the claim that “Cedar experienced the biggest rise, and it overtook Brook in 2020”, while in reality Brook saw a larger increase and Cedar's percentage was far lower than Brook's in 2020; there is also a unit error in the phrase “rose at 55 commuters”, which should be 55%. For coherence and cohesion, the transitional phrase “On the other hand” is misused, and there is a conflict between the overview and detailed content. In terms of lexical resource, there are inappropriate collocations, such as “Cedar also enlarged” which does not fit the context. For grammatical range and accuracy, there are errors including subject-verb disagreement, wrong comparative forms and incorrect noun plurality, with typical mistakes like “The bar chart compare”, “all three city” and “more larger”.",
+   "diagnosisZh": "这篇作文的优点是涵盖了核心趋势，即三个城市的公共交通通勤者占比均有所上升，也尝试给出了具体数据支撑。但存在较多问题：内容上有数据事实错误，如称“Cedar experienced the biggest rise, and it overtook Brook in 2020”，实际Brook的涨幅更大，且2020年Cedar占比远低于Brook；还有单位错误“rose at 55 commuters”，应为55%。衔接上误用转折逻辑词“On the other hand”，且概述与细节内容有冲突。词汇上存在搭配不当，如“Cedar also enlarged”表述不符合语境。语法上有主谓不一致、比较级错误、名词单复数错误等问题，比如“The bar chart compare”“all three city”“more larger”都是典型语法错误。",
+   "duration_ms": 11012,
+   "provider_model": "doubao-seed-2-0-pro-260215"
+  },
+  "correction": {
+   "stages": [
+    {
+     "criterion": "ta_tr",
+     "paragraphs": [
+      {
+       "reasons": [],
+       "paragraphId": "p1",
+       "correctedText": "The bar chart compare the percentage of commuters who used public transport in three cities in 2010 and 2020. The cities shown are Alder, Brook and Cedar, and the figures are measured in percent."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "Cedar experienced the biggest rise, and it overtook Brook in 2020.",
+         "criterion": "ta_tr",
+         "explanationEn": "Brook saw the biggest rise (up 20 percentage points), and Cedar's 25% in 2020 was far lower than Brook's 45%, so Cedar did not overtake Brook. The original statement is inconsistent with the chart data.",
+         "explanationZh": "涨幅最大的是Brook（上升20个百分点），且2020年Cedar的25%远低于Brook的45%，并未超过Brook，原文此处不符合图表数据。"
+        }
+       ],
+       "paragraphId": "p2",
+       "correctedText": "Overall, the percentage increased in all three city during the period. Alder had the highest proportion in both years, whereas Cedar remained the lowest. Brook experienced the biggest rise, and Cedar still stayed below Brook in 2020."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "rose at 55 commuters",
+         "criterion": "ta_tr",
+         "explanationEn": "There is a unit error: the chart measures percentages, not the number of commuters, and the preposition should be \"to\" to indicate the value reached after the increase.",
+         "explanationZh": "数据单位错误，图表统计的是百分比，不是通勤者人数，且介词应为to表示增长到的数值。"
+        }
+       ],
+       "paragraphId": "p3",
+       "correctedText": "On the other hand, in 2010, 40 percent of commuters in Alder used public transport, compared with 25 percent in Brook and just 15 percent in Cedar. By 2020, the figure for Alder rose to 55 percent. This represented an increase of 15 percentage points over ten years."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "a growth of 20 percent",
+         "criterion": "ta_tr",
+         "explanationEn": "This refers to an increase in percentage points, not a percentage growth rate, so it should be corrected to 20 percentage points to avoid ambiguity.",
+         "explanationZh": "此处是百分点的增长，不是百分比的幅度，应改为20个百分点，避免歧义。"
+        }
+       ],
+       "paragraphId": "p4",
+       "correctedText": "Brook saw a more larger increase, from 25 to 45 percent, a growth of 20 percentage points. Cedar also enlarged, but at a slower rate, reaching 25 percent in 2020. The gap between Alder and Cedar was 25 percentage points in 2010 and became 30 in 2020. Therefore, although all cities improved their public transport usage, the difference between the highest and lowest city was slightly wider."
+      }
+     ],
+     "diagnosisEn": "Corrected factual errors, unit errors and wrong comparison conclusions in the essay that are inconsistent with the chart data",
+     "diagnosisZh": "修正了作文中与图表数据不符的事实错误、单位错误以及错误的比较结论",
+     "duration_ms": 12930,
+     "provider_model": "doubao-seed-2-0-pro-260215"
+    },
+    {
+     "criterion": "cc",
+     "paragraphs": [
+      {
+       "reasons": [],
+       "paragraphId": "p1",
+       "correctedText": "The bar chart compare the percentage of commuters who used public transport in three cities in 2010 and 2020. The cities shown are Alder, Brook and Cedar, and the figures are measured in percent."
+      },
+      {
+       "reasons": [],
+       "paragraphId": "p2",
+       "correctedText": "Overall, the percentage increased in all three city during the period. Alder had the highest proportion in both years, whereas Cedar remained the lowest. Brook experienced the biggest rise, and Cedar still stayed below Brook in 2020."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "On the other hand",
+         "criterion": "cc",
+         "explanationEn": "\"On the other hand\" is used to introduce contrasting ideas, which is inappropriate here as the paragraph shifts from overview to detailed data description.",
+         "explanationZh": "\"On the other hand\"用于引出对立观点，此处是从概述转入具体数据描述，逻辑衔接不符。"
+        }
+       ],
+       "paragraphId": "p3",
+       "correctedText": "In detail, in 2010, 40 percent of commuters in Alder used public transport, compared with 25 percent in Brook and just 15 percent in Cedar. By 2020, the figure for Alder rose to 55 percent. This represented an increase of 15 percentage points over ten years."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "Cedar also enlarged",
+         "criterion": "cc",
+         "explanationEn": "The original sentence has ambiguous reference; adding the clear subject makes it explicit that it is the public transport usage rate of Cedar that increased.",
+         "explanationZh": "原句指代模糊，未明确是Cedar的公共通勤占比上升，补充主语后指代更清晰。"
+        }
+       ],
+       "paragraphId": "p4",
+       "correctedText": "Brook saw a more larger increase, from 25 to 45 percent, a growth of 20 percentage points. The figure for Cedar also rose, but at a slower rate, reaching 25 percent in 2020. The gap between Alder and Cedar was 25 percentage points in 2010 and became 30 in 2020. Therefore, although all cities improved their public transport usage, the difference between the highest and lowest city was slightly wider."
+      }
+     ],
+     "diagnosisEn": "Corrected the misuse of logical linking words between paragraphs and adjusted cohesive expressions that do not fit the contextual logic.",
+     "diagnosisZh": "修正了段落间逻辑连接词误用的问题，调整了不符合上下文逻辑的衔接表达。",
+     "duration_ms": 12056,
+     "provider_model": "doubao-seed-2-0-pro-260215"
+    },
+    {
+     "criterion": "lr",
+     "paragraphs": [
+      {
+       "reasons": [],
+       "paragraphId": "p1",
+       "correctedText": "The bar chart compare the percentage of commuters who used public transport in three cities in 2010 and 2020. The cities shown are Alder, Brook and Cedar, and the figures are measured in percent."
+      },
+      {
+       "reasons": [],
+       "paragraphId": "p2",
+       "correctedText": "Overall, the percentage increased in all three city during the period. Alder had the highest proportion in both years, whereas Cedar remained the lowest. Brook experienced the biggest rise, and Cedar still stayed below Brook in 2020."
+      },
+      {
+       "reasons": [],
+       "paragraphId": "p3",
+       "correctedText": "In detail, in 2010, 40 percent of commuters in Alder used public transport, compared with 25 percent in Brook and just 15 percent in Cedar. By 2020, the figure for Alder rose to 55 percent. This represented an increase of 15 percentage points over ten years."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "more larger",
+         "criterion": "lr",
+         "explanationEn": "\"more\" cannot modify the comparative form \"larger\", which is a collocation error; \"far\" should be used to emphasize the degree.",
+         "explanationZh": "“more”不能用来修饰比较级“larger”，属于搭配错误，应使用“far”来强调程度。"
+        }
+       ],
+       "paragraphId": "p4",
+       "correctedText": "Brook saw a far larger increase, from 25 to 45 percent, a growth of 20 percentage points. The figure for Cedar also rose, but at a slower rate, reaching 25 percent in 2020. The gap between Alder and Cedar was 25 percentage points in 2010 and became 30 in 2020. Therefore, although all cities improved their public transport usage, the difference between the highest and lowest city was slightly wider."
+      }
+     ],
+     "diagnosisEn": "Only one lexical collocation error needs correction, and the vocabulary use of other paragraphs meets the requirements",
+     "diagnosisZh": "仅一处词汇搭配错误需修正，其余段落词汇使用符合要求",
+     "duration_ms": 9932,
+     "provider_model": "doubao-seed-2-0-pro-260215"
+    },
+    {
+     "criterion": "gra",
+     "paragraphs": [
+      {
+       "reasons": [
+        {
+         "quote": "The bar chart compare",
+         "criterion": "gra",
+         "explanationEn": "The subject 'The bar chart' is third-person singular, so the present simple verb should take the -s form, corrected to 'compares'.",
+         "explanationZh": "主语The bar chart是第三人称单数，一般现在时谓语动词需加s，改为completes。"
+        }
+       ],
+       "paragraphId": "p1",
+       "correctedText": "The bar chart compares the percentage of commuters who used public transport in three cities in 2010 and 2020. The cities shown are Alder, Brook and Cedar, and the figures are measured in percent."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "three city",
+         "criterion": "gra",
+         "explanationEn": "The number 'three' is followed by a plural countable noun, so the plural form of 'city' is 'cities'.",
+         "explanationZh": "three后接可数名词复数，city的复数形式为cities。"
+        }
+       ],
+       "paragraphId": "p2",
+       "correctedText": "Overall, the percentage increased in all three cities during the period. Alder had the highest proportion in both years, whereas Cedar remained the lowest. Brook experienced the biggest rise, and Cedar still stayed below Brook in 2020."
+      },
+      {
+       "reasons": [],
+       "paragraphId": "p3",
+       "correctedText": "In detail, in 2010, 40 percent of commuters in Alder used public transport, compared with 25 percent in Brook and just 15 percent in Cedar. By 2020, the figure for Alder rose to 55 percent. This represented an increase of 15 percentage points over ten years."
+      },
+      {
+       "reasons": [],
+       "paragraphId": "p4",
+       "correctedText": "Brook saw a far larger increase, from 25 to 45 percent, a growth of 20 percentage points. The figure for Cedar also rose, but at a slower rate, reaching 25 percent in 2020. The gap between Alder and Cedar was 25 percentage points in 2010 and became 30 in 2020. Therefore, although all cities improved their public transport usage, the difference between the highest and lowest city was slightly wider."
+      }
+     ],
+     "diagnosisEn": "Two grammatical errors are corrected, namely a subject-verb agreement error and a plural noun form error.",
+     "diagnosisZh": "修正了两处语法错误，分别是主谓一致错误和名词复数形式错误。",
+     "duration_ms": 10284,
+     "provider_model": "doubao-seed-2-0-pro-260215"
+    }
+   ]
+  }
+ },
+ {
+  "slug": "task2",
+  "task_type": "task2",
+  "prompt_text": "Some people think governments should spend more money on public transport rather than building new roads. To what extent do you agree or disagree?",
+  "paragraphs": [
+   {
+    "id": "p1",
+    "text": "Nowadays, traffic is a big problem in many city. Some people believe government should spend more money in public transport instead of build new roads. I agree with this opinion because buses and trains can carry more people and it is better for environment, although roads also need some investment."
+   },
+   {
+    "id": "p2",
+    "text": "On the other hand, public transport can reduce the number of cars on the road. A bus carry many passengers, while a private car usually only have one or two people. If the bus service is frequent and the ticket price are cheap, more workers will choose it to go to their office. For example, in my town a new bus route was opened near the factory and several of my neighbours now leave their cars at home. However, the bus need to be reliable because nobody want to arrive late every day."
+   },
+   {
+    "id": "p3",
+    "text": "In contrast, trains and buses is useful for people who cannot afford a car. Students and older people can travel to school or hospital more easy. This mean that spending on transport does not only help drivers but also other member of society. Building another road may make driving more comfortable, but it does not directly solve this problem. In addition, fewer cars can reduce air pollution, especially when the buses uses clean energy."
+   },
+   {
+    "id": "p4",
+    "text": "On the other hand, government should not ignore roads completely. Rural areas still need safe roads for ambulances and for delivery goods. My view is that existing roads should be maintained, but in crowded cities the biggest share of new investment should goes to public transport. In conclusion, all new road construction should stop and public transport alone will solve every traffic problem."
+   }
+  ],
+  "task_image_url": null,
+  "assessment": {
+   "scores": {
+    "cc": {
+     "score": 5,
+     "labelEn": "Coherence and Cohesion",
+     "labelZh": "连贯与衔接"
+    },
+    "lr": {
+     "score": 5,
+     "labelEn": "Lexical Resource",
+     "labelZh": "词汇资源"
+    },
+    "gra": {
+     "score": 4,
+     "labelEn": "Grammatical Range and Accuracy",
+     "labelZh": "语法多样性与准确性"
+    },
+    "ta_tr": {
+     "score": 5,
+     "labelEn": "Task Response",
+     "labelZh": "任务回应"
+    }
+   },
+   "overall": 5,
+   "diagnosisEn": "This essay has the strength of basically responding to the core topic of the prompt, clearly expressing the position of supporting more investment in public transport, also taking into account the necessity of road construction, and combining personal life examples for argumentation. However, the shortcomings are obvious: on the one hand, the position is inconsistent, the conclusion that “all new road construction should stop and public transport alone will solve every traffic problem” is too absolute and contradicts the earlier view that roads also need investment. On the other hand, some ideas are insufficiently developed, for example, the benefits of public transport to the environment are not fully elaborated. In addition, the use of cohesive devices is confusing, with “On the other hand” used twice to introduce arguments supporting public transport, leading to unclear logical layering. There are frequent basic grammatical errors, such as subject-verb agreement errors and noun singular-plural mistakes, which affect the readability of some content.",
+   "diagnosisZh": "本文优势在于基本回应了题目核心议题，明确表达了支持更多投资公共交通的立场，也兼顾了道路建设的必要性，还结合了个人生活实例进行论证。但不足也较为明显：一方面立场前后不一致，结尾提出“all new road construction should stop and public transport alone will solve every traffic problem”过于绝对，与前文提到的道路也需要投资的观点矛盾；另一方面部分观点拓展不足，比如公共交通对环境的益处没有充分展开。此外衔接词使用混乱，两次用“On the other hand”引出支持公共交通的论点，逻辑分层不清晰。语法层面频繁出现基础错误，比如主谓不一致、名词单复数错误较多，影响部分内容的可读性。",
+   "duration_ms": 8951,
+   "provider_model": "doubao-seed-2-0-pro-260215"
+  },
+  "correction": {
+   "stages": [
+    {
+     "criterion": "ta_tr",
+     "paragraphs": [
+      {
+       "reasons": [],
+       "paragraphId": "p1",
+       "correctedText": "Nowadays, traffic is a big problem in many city. Some people believe government should spend more money in public transport instead of build new roads. I agree with this opinion because buses and trains can carry more people and it is better for environment, although roads also need some investment."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "On the other hand",
+         "criterion": "ta_tr",
+         "explanationEn": "This paragraph discusses the first supporting argument for prioritizing public transport, so it should be introduced by \"On the one hand\"; the original linking word caused logical contradiction in argumentation.",
+         "explanationZh": "本段论述支持优先发展公共交通的立场，属于支持面的第一个分论点，应使用“On the one hand”引出，原链接词误用会造成论述逻辑矛盾。"
+        }
+       ],
+       "paragraphId": "p2",
+       "correctedText": "On the one hand, public transport can reduce the number of cars on the road. A bus carry many passengers, while a private car usually only have one or two people. If the bus service is frequent and the ticket price are cheap, more workers will choose it to go to their office. For example, in my town a new bus route was opened near the factory and several of my neighbours now leave their cars at home. However, the bus need to be reliable because nobody want to arrive late every day."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "In contrast",
+         "criterion": "ta_tr",
+         "explanationEn": "This paragraph further discusses the advantages of public transport as a supplement to the previous supporting argument; the original linking phrase \"In contrast\" implies contrast, which does not fit the progressive logic between paragraphs.",
+         "explanationZh": "本段继续论述公共交通的优势，是对前一段支持立场的补充，原链接词“In contrast”表对比，不符合段落间的递进逻辑。"
+        }
+       ],
+       "paragraphId": "p3",
+       "correctedText": "Furthermore, trains and buses is useful for people who cannot afford a car. Students and older people can travel to school or hospital more easy. This mean that spending on transport does not only help drivers but also other member of society. Building another road may make driving more comfortable, but it does not directly solve this problem. In addition, fewer cars can reduce air pollution, especially when the buses uses clean energy."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "all new road construction should stop and public transport alone will solve every traffic problem",
+         "criterion": "ta_tr",
+         "explanationEn": "This statement is overly absolute and contradicts the earlier position that roads also need investment and rural areas require safe roads, which fails to meet the requirement of argument consistency.",
+         "explanationZh": "该表述过于绝对，与前文提到的“道路也需要一定投入、农村地区需要安全道路”的立场矛盾，不符合论证的一致性要求。"
+        }
+       ],
+       "paragraphId": "p4",
+       "correctedText": "On the other hand, government should not ignore roads completely. Rural areas still need safe roads for ambulances and for delivery goods. My view is that existing roads should be maintained, but in crowded cities the biggest share of new investment should goes to public transport. In conclusion, most of the transport budget should be allocated to public transport rather than new road construction, and public transport can effectively alleviate most traffic problems when supported by proper road maintenance."
+      }
+     ],
+     "diagnosisEn": "Corrected contradictory argument logic, misused linking words, and overly absolute conclusion to ensure consistent position and full coverage of the task requirements.",
+     "diagnosisZh": "修正了论述逻辑矛盾、链接词误用及结尾过于绝对的问题，确保立场一致且回应全面覆盖题目要求。",
+     "duration_ms": 30888,
+     "provider_model": "doubao-seed-2-0-pro-260215"
+    },
+    {
+     "criterion": "cc",
+     "paragraphs": [
+      {
+       "reasons": [],
+       "paragraphId": "p1",
+       "correctedText": "Nowadays, traffic is a big problem in many city. Some people believe government should spend more money in public transport instead of build new roads. I agree with this opinion because buses and trains can carry more people and it is better for environment, although roads also need some investment."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "On the one hand, public transport can reduce",
+         "criterion": "cc",
+         "explanationEn": "Adding the gerund “improving” clarifies that this paragraph discusses the effect of investing in public transport, echoing the funding topic in the first paragraph and strengthening logical relevance.",
+         "explanationZh": "补充动名词“improving”明确本段讨论的是投资公共交通带来的效果，呼应首段的资金投入话题，逻辑关联更紧密。"
+        }
+       ],
+       "paragraphId": "p2",
+       "correctedText": "On the one hand, improving public transport can reduce the number of cars on the road. A bus carry many passengers, while a private car usually only have one or two people. If the bus service is frequent and the ticket price are cheap, more workers will choose it to go to their office. For example, in my town a new bus route was opened near the factory and several of my neighbours now leave their cars at home. However, the bus need to be reliable because nobody want to arrive late every day."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "Furthermore, trains and buses is useful",
+         "criterion": "cc",
+         "explanationEn": "Replacing “Furthermore” with a clearer transition sentence explicitly indicates this paragraph is the second supporting argument for public transport investment, avoiding abrupt cohesion.",
+         "explanationZh": "将“Furthermore”替换为更明确的过渡句，清晰说明本段是承接上文的第二个支持公共交通投资的论点，避免衔接突兀。"
+        },
+        {
+         "quote": "this problem",
+         "criterion": "cc",
+         "explanationEn": "The reference “this problem” clearly refers to the aforementioned travel inconvenience for low-income and special groups, so readers do not need to guess the referent.",
+         "explanationZh": "指代清晰，“this problem”明确指向前文提到的低收入及特殊群体出行不便的问题，读者无需猜测指代对象。"
+        }
+       ],
+       "paragraphId": "p3",
+       "correctedText": "Another key benefit of investing in public transport is that trains and buses is useful for people who cannot afford a car. Students and older people can travel to school or hospital more easy. This mean that spending on transport does not only help drivers but also other member of society. Building another road may make driving more comfortable, but it does not directly solve this problem. In addition, fewer cars can reduce air pollution, especially when the buses uses clean energy."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "In conclusion, most of the transport budget",
+         "criterion": "cc",
+         "explanationEn": "Separating the conclusion sentence into an independent paragraph conforms to IELTS writing structure norms, making the overall structure clearer and distinguishing arguments from the summary.",
+         "explanationZh": "将结论句单独成段，符合雅思写作结构规范，让全文结构更清晰，论点和总结区分明确。"
+        }
+       ],
+       "paragraphId": "p4",
+       "correctedText": "On the other hand, government should not ignore roads completely. Rural areas still need safe roads for ambulances and for delivery goods. My view is that existing roads should be maintained, but in crowded cities the biggest share of new investment should goes to public transport. \n\nIn conclusion, most of the transport budget should be allocated to public transport rather than new road construction, and public transport can effectively alleviate most traffic problems when supported by proper road maintenance."
+      }
+     ],
+     "diagnosisEn": "Optimized logical transitions between paragraphs, clarity of referencing, and logical integration of the conclusion to improve overall coherence.",
+     "diagnosisZh": "优化了段落间逻辑衔接、指代清晰度以及结论段的逻辑整合，提升整体连贯性。",
+     "duration_ms": 18256,
+     "provider_model": "doubao-seed-2-0-pro-260215"
+    },
+    {
+     "criterion": "lr",
+     "paragraphs": [
+      {
+       "reasons": [
+        {
+         "quote": "spend more money in",
+         "criterion": "lr",
+         "explanationEn": "\"spend money on sth\" is a fixed collocation; the preposition \"in\" is incorrect here.",
+         "explanationZh": "“spend money on sth”是固定搭配，表示“在某事上花钱”，介词in使用错误。"
+        },
+        {
+         "quote": "for environment",
+         "criterion": "lr",
+         "explanationEn": "When referring to the natural environment, the definite article \"the\" is required before \"environment\" as per conventional English usage.",
+         "explanationZh": "指代“自然环境”时，environment前需加定冠词the，符合英语惯用搭配。"
+        }
+       ],
+       "paragraphId": "p1",
+       "correctedText": "Nowadays, traffic is a big problem in many city. Some people believe government should spend more money on public transport instead of build new roads. I agree with this opinion because buses and trains can carry more people and it is better for the environment, although roads also need some investment."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "go to their office",
+         "criterion": "lr",
+         "explanationEn": "When describing daily travel to work, \"commute\" is more contextually accurate than \"go\" and is a common expression in transport-related topics.",
+         "explanationZh": "描述上班族日常通勤上班时，“commute”比普通的“go”更精准贴合语境，符合相关话题的常用表达。"
+        }
+       ],
+       "paragraphId": "p2",
+       "correctedText": "On the one hand, improving public transport can reduce the number of cars on the road. A bus carry many passengers, while a private car usually only have one or two people. If the bus service is frequent and the ticket price are cheap, more workers will choose it to commute to their office. For example, in my town a new bus route was opened near the factory and several of my neighbours now leave their cars at home. However, the bus need to be reliable because nobody want to arrive late every day."
+      },
+      {
+       "reasons": [],
+       "paragraphId": "p3",
+       "correctedText": "Another key benefit of investing in public transport is that trains and buses is useful for people who cannot afford a car. Students and older people can travel to school or hospital more easy. This mean that spending on transport does not only help drivers but also other member of society. Building another road may make driving more comfortable, but it does not directly solve this problem. In addition, fewer cars can reduce air pollution, especially when the buses uses clean energy."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "for delivery goods",
+         "criterion": "lr",
+         "explanationEn": "When the preposition \"for\" is followed by an action, the gerund form \"delivering\" should be used; \"deliver goods\" is the fixed collocation for transporting goods.",
+         "explanationZh": "介词for后接表示动作的内容时，应使用动名词形式delivering，“deliver goods”是“运送货物”的固定搭配。"
+        }
+       ],
+       "paragraphId": "p4",
+       "correctedText": "On the other hand, government should not ignore roads completely. Rural areas still need safe roads for ambulances and for delivering goods. My view is that existing roads should be maintained, but in crowded cities the biggest share of new investment should goes to public transport. \n\nIn conclusion, most of the transport budget should be allocated to public transport rather than new road construction, and public transport can effectively alleviate most traffic problems when supported by proper road maintenance."
+      }
+     ],
+     "diagnosisEn": "Corrected inappropriate lexical collocations, preposition misuse and inaccurate word choices in the essay, while retaining the original meaning and structure.",
+     "diagnosisZh": "修正了文中词汇搭配不当、介词误用及用词不准确的问题，保留原意与结构不变。",
+     "duration_ms": 16448,
+     "provider_model": "doubao-seed-2-0-pro-260215"
+    },
+    {
+     "criterion": "gra",
+     "paragraphs": [
+      {
+       "reasons": [
+        {
+         "quote": "many city",
+         "criterion": "gra",
+         "explanationEn": "'many' modifies plural countable nouns, so the plural form 'cities' should be used.",
+         "explanationZh": "many修饰可数名词复数，city的复数形式为cities。"
+        },
+        {
+         "quote": "instead of build",
+         "criterion": "gra",
+         "explanationEn": "After the preposition 'of', the gerund form 'building' should be used.",
+         "explanationZh": "介词of后接动词时需用动名词形式building。"
+        }
+       ],
+       "paragraphId": "p1",
+       "correctedText": "Nowadays, traffic is a big problem in many cities. Some people believe government should spend more money on public transport instead of building new roads. I agree with this opinion because buses and trains can carry more people and it is better for the environment, although roads also need some investment."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "A bus carry",
+         "criterion": "gra",
+         "explanationEn": "The subject 'a bus' is third-person singular, so the simple present tense verb should be 'carries'.",
+         "explanationZh": "主语a bus是第三人称单数，一般现在时谓语动词用carries。"
+        },
+        {
+         "quote": "a private car usually only have",
+         "criterion": "gra",
+         "explanationEn": "The subject 'a private car' is third-person singular, so the simple present tense verb should be 'has'.",
+         "explanationZh": "主语a private car是第三人称单数，一般现在时谓语动词用has。"
+        },
+        {
+         "quote": "the ticket price are cheap",
+         "criterion": "gra",
+         "explanationEn": "The subject 'the ticket price' is singular, so the verb 'is' should be used.",
+         "explanationZh": "主语the ticket price是单数，be动词用is。"
+        },
+        {
+         "quote": "the bus need to be reliable",
+         "criterion": "gra",
+         "explanationEn": "The subject 'the bus' is third-person singular, so the simple present tense verb should be 'needs'.",
+         "explanationZh": "主语the bus是第三人称单数，一般现在时谓语动词用needs。"
+        },
+        {
+         "quote": "nobody want to arrive",
+         "criterion": "gra",
+         "explanationEn": "The subject 'nobody' is third-person singular, so the simple present tense verb should be 'wants'.",
+         "explanationZh": "主语nobody是第三人称单数，一般现在时谓语动词用wants。"
+        }
+       ],
+       "paragraphId": "p2",
+       "correctedText": "On the one hand, improving public transport can reduce the number of cars on the road. A bus carries many passengers, while a private car usually only has one or two people. If the bus service is frequent and the ticket price is cheap, more workers will choose it to commute to their office. For example, in my town a new bus route was opened near the factory and several of my neighbours now leave their cars at home. However, the bus needs to be reliable because nobody wants to arrive late every day."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "trains and buses is useful",
+         "criterion": "gra",
+         "explanationEn": "The subject 'trains and buses' is plural, so the verb 'are' should be used.",
+         "explanationZh": "主语trains and buses是复数，be动词用are。"
+        },
+        {
+         "quote": "travel to school or hospital more easy",
+         "criterion": "gra",
+         "explanationEn": "The verb 'travel' should be modified by the adverb 'easily', not the adjective 'easy'.",
+         "explanationZh": "修饰动词travel需用副词easily，而非形容词easy。"
+        },
+        {
+         "quote": "This mean that",
+         "criterion": "gra",
+         "explanationEn": "The subject 'this' is third-person singular, so the simple present tense verb should be 'means'.",
+         "explanationZh": "主语this是第三人称单数，一般现在时谓语动词用means。"
+        },
+        {
+         "quote": "other member of society",
+         "criterion": "gra",
+         "explanationEn": "'other' modifies plural countable nouns, so the plural form 'members' should be used.",
+         "explanationZh": "other后接可数名词复数，member的复数形式为members。"
+        },
+        {
+         "quote": "the buses uses clean energy",
+         "criterion": "gra",
+         "explanationEn": "The subject 'the buses' is plural, so the simple present tense verb should be 'use'.",
+         "explanationZh": "主语the buses是复数，一般现在时谓语动词用use。"
+        }
+       ],
+       "paragraphId": "p3",
+       "correctedText": "Another key benefit of investing in public transport is that trains and buses are useful for people who cannot afford a car. Students and older people can travel to school or hospital more easily. This means that spending on transport does not only help drivers but also other members of society. Building another road may make driving more comfortable, but it does not directly solve this problem. In addition, fewer cars can reduce air pollution, especially when the buses use clean energy."
+      },
+      {
+       "reasons": [
+        {
+         "quote": "should goes to public transport",
+         "criterion": "gra",
+         "explanationEn": "After the modal verb 'should', the base form of the verb 'go' should be used.",
+         "explanationZh": "情态动词should后接动词原形go。"
+        }
+       ],
+       "paragraphId": "p4",
+       "correctedText": "On the other hand, government should not ignore roads completely. Rural areas still need safe roads for ambulances and for delivering goods. My view is that existing roads should be maintained, but in crowded cities the biggest share of new investment should go to public transport.\n\nIn conclusion, most of the transport budget should be allocated to public transport rather than new road construction, and public transport can effectively alleviate most traffic problems when supported by proper road maintenance."
+      }
+     ],
+     "diagnosisEn": "Grammatical errors including subject-verb agreement, noun number, non-finite verbs and adverb usage are corrected, while retaining the original content and structure.",
+     "diagnosisZh": "修正了全文中主谓一致、名词单复数、非谓语动词、副词用法的语法错误，同时保留原文内容和结构不变。",
+     "duration_ms": 28008,
+     "provider_model": "doubao-seed-2-0-pro-260215"
+    }
+   ]
+  }
+ }
+]

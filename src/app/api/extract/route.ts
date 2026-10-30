@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const llmClient = createLLMClient(forwardHeaders);
 
     const contentParts: Array<{ type: string; text?: string; image_url?: { url: string; detail: string } }> = [
-      { type: 'text', text: buildExtractPrompt(uploads.some(u => u.role === 'task')) },
+      { type: 'text', text: buildExtractPrompt(uploads.some((u: { role: string }) => u.role === 'task')) },
     ];
 
     for (const url of imageUrls) {
